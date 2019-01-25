@@ -347,7 +347,7 @@ public class SamzaExecutor implements SqlExecutor {
     outputData.add(messageEnvelope);
   }
 
-  private boolean processEnvironmentVariable(String envName, String value) {
+  private boolean processEnvironmentVariable(String name, String value) {
     return true;
   }
 
@@ -521,11 +521,17 @@ public class SamzaExecutor implements SqlExecutor {
 
   public class SamzaExecutorEnvironmentVariableHandler extends EnvironmentVariableHandlerImpl {
     public SamzaExecutorEnvironmentVariableHandler() {
-      specs.put("samza.sql.output", new String[]{"pretty", "compact"}, "compact");
     }
 
-    protected boolean processEnvironmentVariable(String envName, String value) {
-      return SamzaExecutor.this.processEnvironmentVariable(envName, value);
+    protected EnvironmentVariableSpecs initializeEnvironmentVariableSpecs() {
+      HashMap<String, EnvironmentVariableSpecs.Spec> specMap = new HashMap<>();
+      specMap.put("samza.sql.output",
+              new EnvironmentVariableSpecs.Spec(new String[]{"pretty", "compact"}, "compact"));
+      return new EnvironmentVariableSpecs(specMap);
+    }
+
+    protected boolean processEnvironmentVariable(String name, String value) {
+      return SamzaExecutor.this.processEnvironmentVariable(name, value);
     }
 
     protected boolean isAcceptUnknowName() {
