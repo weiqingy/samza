@@ -564,6 +564,16 @@ project(":samza-yarn_$scalaSuffix") {
   jar.dependsOn("lesscss")
 }
 
+project(":samza-kubernetes_$scalaSuffix") {
+  apply plugin: 'java'
+
+  dependencies {
+    compile project(':samza-api')
+    compile project(":samza-core_$scalaSuffix")
+    compile group: 'io.fabric8', name: 'kubernetes-client', version: $kubernetesJavaClientVersion
+  }
+}
+
 project(":samza-shell") {
   apply plugin: 'java'
 
