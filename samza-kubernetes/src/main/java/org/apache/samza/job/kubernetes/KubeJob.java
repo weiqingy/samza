@@ -41,7 +41,7 @@ public class KubeJob implements StreamJob {
   private ApplicationStatus currentStatus;
 
   public KubeJob(Config config) {
-    this.kubernetesClient = KubernetesClientFactory.create();
+    this.kubernetesClient = KubeClientFactory.create();
     this.config = config;
     this.podName = config.get("job.id");
     this.currentStatus = ApplicationStatus.New;
@@ -61,12 +61,12 @@ public class KubeJob implements StreamJob {
     // create Container
     String containerId  = "SamzaOperator";
     String image = "xx";
-    Container container = KubernetesUtils.createContainer(containerId, image ,  request);
+    Container container = KubeUtils.createContainer(containerId, image ,  request);
 
     // create Pod
     OwnerReference ownerReference = null;
     String restartPolicy = "Never";
-    Pod pod = KubernetesUtils.createPod(podName, ownerReference, restartPolicy, container);
+    Pod pod = KubeUtils.createPod(podName, ownerReference, restartPolicy, container);
     kubernetesClient.pods().create(pod);
 
     return this;
