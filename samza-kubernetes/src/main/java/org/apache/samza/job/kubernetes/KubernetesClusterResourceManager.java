@@ -14,6 +14,8 @@ import org.apache.samza.job.CommandBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+
 import static org.apache.samza.job.kubernetes.KubernetesUtils.POD_NAME_PREFIX;
 import static org.apache.samza.job.kubernetes.KubernetesUtils.POD_RESTART_POLICY;
 
@@ -40,15 +42,19 @@ public class KubernetesClusterResourceManager extends ClusterResourceManager {
       log.info("Requesting resources on " + resourceRequest.getPreferredHost() + " for container " + resourceRequest.getContainerID());
       String preferredHost = resourceRequest.getPreferredHost();
       Container container = KubernetesUtils.createContainer(resourceRequest.getContainerID(), "imageName", resourceRequest);
-      //TODO setup owner references
-      Pod pod = KubernetesUtils.createPod(POD_NAME_PREFIX, null, POD_RESTART_POLICY,container);
+      PodBuilder podBuilder = new PodBuilder().editOrNewMetadata().withName(POD_NAME_PREFIX + resourceRequest.getContainerID())
+              .withOwnerReferences(new ArrayList<>()).endMetadata()
+              .editOrNewSpec().withRestartPolicy(POD_RESTART_POLICY).addToContainers(container).endSpec();
+
       if (preferredHost.equals("ANY_HOST")) {
         log.info("Making a request for ANY_HOST ");
-
+        //TODO setup owner references
+        Pod pod = podBuilder.build();
         // Create a pod with only one container in anywhere
         client.pods().create(pod);
       } else {
         log.info("Making a preferred host request on " + preferredHost);
+        podBuilder.editOrNewSpec().editOrNewAffinity().editOrNewNodeAffinity();
       }
       client.pods().inNamespace("namespace<TODO>").createNew();
     }
@@ -60,7 +66,7 @@ public class KubernetesClusterResourceManager extends ClusterResourceManager {
 
     @Override
     public void releaseResources(SamzaResource resource) {
-
+      client.pods().withName(resource.getResourceID()).delete();
     }
 
     @Override
