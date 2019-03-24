@@ -24,7 +24,7 @@ import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
-public class KubernetesClientFactory {
+public class KubeClientFactory {
 
   public static KubernetesClient create() {
     ConfigBuilder builder = new ConfigBuilder();

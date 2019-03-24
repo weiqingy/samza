@@ -22,10 +22,10 @@ package org.apache.samza.job.kubernetes;
 import io.fabric8.kubernetes.api.model.*;
 import org.apache.samza.clustermanager.SamzaResourceRequest;
 
-public class KubernetesUtils {
+public class KubeUtils {
 
   public static final String POD_NAME_PREFIX = "Pod-";
-
+  public static final String CONTAINER_NAME = "processor";
   public static final String POD_RESTART_POLICY = "Always";
 
   public static Pod createPod(String name, OwnerReference ownerReference, String restartPolicy
