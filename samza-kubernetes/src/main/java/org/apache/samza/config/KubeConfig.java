@@ -17,20 +17,25 @@
  * under the License.
  */
 
-package org.apache.samza.job.kubernetes;
+package org.apache.samza.config;
 
-import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.ConfigBuilder;
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClient;
+public class KubeConfig {
+  private static String K8S_API_NAMESPACE = "kubernetes.api.namespace";
+  private static String K8S_POD_LABELS = "kubernetes.pod.labels";
+  private Config config;
 
-public class KubernetesClientFactory {
-
-  public static KubernetesClient create() {
-    ConfigBuilder builder = new ConfigBuilder();
-    Config config = builder.build();
-
-    KubernetesClient client = new DefaultKubernetesClient(config);
-    return client;
+  public KubeConfig(Config config) {
+    this.config = config;
   }
+
+  public static KubeConfig validate(Config config) throws ConfigException {
+    KubeConfig kc = new KubeConfig(config);
+    kc.validate();
+    return kc;
+  }
+
+  private void validate() throws ConfigException {
+    // TODO
+  }
+
 }
