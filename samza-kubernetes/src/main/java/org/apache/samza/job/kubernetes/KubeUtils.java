@@ -25,8 +25,18 @@ import org.apache.samza.clustermanager.SamzaResourceRequest;
 public class KubeUtils {
 
   public static final String POD_NAME_PREFIX = "Pod-";
-  public static final String CONTAINER_NAME = "processor";
+  public static final String CONTAINER_NAME = "stream-processor";
   public static final String POD_RESTART_POLICY = "Always";
+  public static final String MY_POD_NAME = "MY_POD_NAME";
+  //jobId-containerId
+  public static final String POD_NAME_FORMAT = "%s-%s";
+
+
+  public static String getSamzaContainerNameFromPodName(String podName) {
+    //jobId-containerId
+    String[] splits = podName.split("-");
+    return splits[1];
+  }
 
   public static Pod createPod(String name, OwnerReference ownerReference, String restartPolicy
           , Container container) {
