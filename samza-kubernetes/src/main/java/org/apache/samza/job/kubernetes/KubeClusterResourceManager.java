@@ -41,7 +41,6 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
 
   KubernetesClient client = null;
   private final Object lock = new Object();
-  //TODO
   private String jobId = "";
   private String image = "";
   private String namespace = "";
@@ -67,15 +66,16 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     startPodWatcher();
   }
 
+  // Create the owner reference of the samaza-operator pod
   private void createOwnerReferences() {
-    // The pod needs to pass in MY_POD_NAME env
+    // The operator pod yaml needs to pass in MY_POD_NAME env
     String thisPodName = System.getenv(MY_POD_NAME);
     Pod pod = client.pods().inNamespace(namespace).withName(thisPodName).get();
-     ownerReference = new OwnerReferenceBuilder()
-            .withName(pod.getMetadata().getName())
-            .withApiVersion(pod.getApiVersion())
-            .withUid(pod.getMetadata().getUid()).withKind(pod.getKind())
-            .withController(true).build();
+    ownerReference = new OwnerReferenceBuilder()
+          .withName(pod.getMetadata().getName())
+          .withApiVersion(pod.getApiVersion())
+          .withUid(pod.getMetadata().getUid()).withKind(pod.getKind())
+          .withController(true).build();
   }
 
   public void startPodWatcher() {
@@ -90,12 +90,14 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
           case MODIFIED:
             log.info("Pod " + pod.getMetadata().getName() + " is modified.");
             if (isPodFailed(pod)) {
+              deletePod(pod);
               createNewStreamProcessor(pod);
             }
             break;
           case ERROR:
             log.info("Pod " + pod.getMetadata().getName() + " received error.");
             if (isPodFailed(pod)) {
+              deletePod(pod);
               createNewStreamProcessor(pod);
             }
             break;
@@ -118,6 +120,14 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     return pod.getStatus() != null && pod.getStatus().getPhase().equals("Failed");
   }
 
+  private void deletePod(Pod pod) {
+    boolean deleted = client.pods().delete(pod);
+    if (deleted) {
+      log.info("Deleted pod " + pod.getMetadata().getName());
+    } else {
+      log.info("Failed to deleted pod " + pod.getMetadata().getName());
+    }
+  }
   private void createNewStreamProcessor(Pod pod) {
     int memory = Integer.valueOf(pod.getSpec().getContainers().get(0).getResources().getRequests().get("memory").getAmount());
     int cpu = Integer.valueOf(pod.getSpec().getContainers().get(0).getResources().getRequests().get("cpu").getAmount());
@@ -137,7 +147,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   @Override
   public void requestResources(SamzaResourceRequest resourceRequest) {
     log.info("Requesting resources on " + resourceRequest.getPreferredHost() + " for container " + resourceRequest.getContainerID());
-    Container container = KubeUtils.createContainer(CONTAINER_NAME, image, resourceRequest);
+    Container container = KubeUtils.createContainer(STREAM_PROCESSOR_CONTAINER_NAME, image, resourceRequest);
     PodBuilder podBuilder = new PodBuilder().editOrNewMetadata()
             .withName(String.format(POD_NAME_FORMAT, jobId, resourceRequest.getContainerID()))
             .withOwnerReferences(ownerReference)
@@ -146,7 +156,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
             .withRestartPolicy(POD_RESTART_POLICY).addToContainers(container).endSpec();
 
     String preferredHost = resourceRequest.getPreferredHost();
-    Pod pod = null;
+    Pod pod;
     if (preferredHost.equals("ANY_HOST")) {
       // Create a pod with only one container in anywhere
       pod = podBuilder.build();

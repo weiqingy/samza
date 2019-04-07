@@ -24,8 +24,9 @@ import org.apache.samza.clustermanager.SamzaResourceRequest;
 
 public class KubeUtils {
 
-  public static final String POD_NAME_PREFIX = "Pod-";
-  public static final String CONTAINER_NAME = "stream-processor";
+  public static final String STREAM_PROCESSOR_CONTAINER_NAME = "stream-processor";
+  public static final String SAMZA_AM_CONTAINER_NAME = "samza-am";
+
   public static final String POD_RESTART_POLICY = "Always";
   public static final String MY_POD_NAME = "MY_POD_NAME";
   //jobId-containerId
@@ -44,12 +45,20 @@ public class KubeUtils {
             .editOrNewSpec().withRestartPolicy(restartPolicy).addToContainers(container).endSpec().build();
   }
 
+  public static Pod createPod(String name, String restartPolicy, Container container) {
+    return new PodBuilder().editOrNewMetadata().withName(name).endMetadata()
+            .editOrNewSpec().withRestartPolicy(restartPolicy).addToContainers(container).endSpec().build();
+  }
+
   public static Container createContainer(String containerId, String image, SamzaResourceRequest resourceRequest) {
     Quantity memQuantity = new QuantityBuilder(false)
             .withAmount(String.valueOf(resourceRequest.getMemoryMB())).withFormat("Mi").build();
     Quantity cpuQuantity = new QuantityBuilder(false)
             .withAmount(String.valueOf(resourceRequest.getNumCores())).build();
     return new ContainerBuilder().withName(containerId).withImage(image).editOrNewResources()
-            .addToRequests("memory", memQuantity).addToRequests("cpu", cpuQuantity).endResources().build();
+            .addToRequests("memory", memQuantity).addToRequests("cpu", cpuQuantity).endResources().withCommand("sdfsfsdfs").build();
   }
+
+  // TODO: will add util methods describing details about Pod status and container status. Refer to Spark'KubernetesUtils.
+  //       Then we can use them in logs and exception messages.
 }

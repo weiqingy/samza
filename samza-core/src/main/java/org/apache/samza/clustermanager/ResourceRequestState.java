@@ -241,7 +241,7 @@ public class ResourceRequestState {
   public void releaseUnstartableContainer(SamzaResource resource, String preferredHost) {
     synchronized (lock) {
       log.info("Releasing unstartable container {} on host {}", resource.getResourceID(), resource.getHost());
-      manager. releaseResources(resource);
+      manager.releaseResources(resource);
 
       // A reference for the resource could either be held in the preferred host buffer or in the ANY_HOST buffer.
       if (allocatedResources.get(preferredHost) != null) {

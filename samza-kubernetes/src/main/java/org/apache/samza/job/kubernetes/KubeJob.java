@@ -19,18 +19,25 @@
 
 package org.apache.samza.job.kubernetes;
 
-import com.google.common.collect.ImmutableList;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import java.util.Collection;
+import java.util.concurrent.TimeUnit;
+import org.apache.samza.SamzaException;
+import org.apache.samza.clustermanager.ResourceRequestState;
 import org.apache.samza.clustermanager.SamzaResourceRequest;
 import org.apache.samza.config.Config;
 import org.apache.samza.job.ApplicationStatus;
 import org.apache.samza.job.StreamJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.collection.mutable.StringBuilder;
+
+import static org.apache.samza.job.ApplicationStatus.*;
+import static org.apache.samza.job.kubernetes.KubeUtils.POD_NAME_FORMAT;
+import static org.apache.samza.job.kubernetes.KubeUtils.SAMZA_AM_CONTAINER_NAME;
 
 
 public class KubeJob implements StreamJob {
@@ -39,12 +46,15 @@ public class KubeJob implements StreamJob {
   private KubernetesClient kubernetesClient;
   private String podName;
   private ApplicationStatus currentStatus;
+  private String nameSpace = "";
+  private KubePodStatusWatcher watcher;
 
   public KubeJob(Config config) {
     this.kubernetesClient = KubeClientFactory.create();
     this.config = config;
-    this.podName = config.get("job.id");
+    this.podName = String.format(POD_NAME_FORMAT, SAMZA_AM_CONTAINER_NAME, config.get("job.id"));
     this.currentStatus = ApplicationStatus.New;
+    this.watcher = new KubePodStatusWatcher(podName);
   }
 
   /**
@@ -54,21 +64,19 @@ public class KubeJob implements StreamJob {
     // create SamzaResourceRequest
     int numCores = 1;
     int memoryMB = 500;
-    String preferredHost = "localhost";
-    String expectedContainerID = "SamzaOperator";
-    SamzaResourceRequest request = new SamzaResourceRequest(numCores, memoryMB, preferredHost, expectedContainerID);
+    String preferredHost = ResourceRequestState.ANY_HOST;
+    SamzaResourceRequest request = new SamzaResourceRequest(numCores, memoryMB, preferredHost, podName);
 
     // create Container
-    String containerId  = "SamzaOperator";
     String image = "xx";
-    Container container = KubeUtils.createContainer(containerId, image ,  request);
+    Container container = KubeUtils.createContainer(SAMZA_AM_CONTAINER_NAME, image, request);
 
     // create Pod
-    OwnerReference ownerReference = null;
-    String restartPolicy = "Never";
-    Pod pod = KubeUtils.createPod(podName, ownerReference, restartPolicy, container);
+    String restartPolicy = "OnFailure";
+    Pod pod = KubeUtils.createPod(podName, restartPolicy, container);
     kubernetesClient.pods().create(pod);
-
+    // add watcher
+    kubernetesClient.pods().withName(podName).watch(watcher);
     return this;
   }
 
@@ -84,38 +92,59 @@ public class KubeJob implements StreamJob {
    * {@inheritDoc}
    */
   public ApplicationStatus waitForFinish(long timeoutMs) {
-    return waitForStatus(
-        ImmutableList.of(ApplicationStatus.SuccessfulFinish, ApplicationStatus.UnsuccessfulFinish),
-        timeoutMs);
+    watcher.waitForCompleted(timeoutMs, TimeUnit.MILLISECONDS);
+    return getStatus();
   }
 
   /**
    * {@inheritDoc}
    */
   public ApplicationStatus waitForStatus(ApplicationStatus status, long timeoutMs) {
-    return waitForStatus(ImmutableList.of(status), timeoutMs);
+    switch (status.getStatusCode()) {
+      case New:
+        watcher.waitForPending(timeoutMs, TimeUnit.MILLISECONDS);
+        return New;
+      case Running:
+        watcher.waitForRunning(timeoutMs, TimeUnit.MILLISECONDS);
+        return Running;
+      case SuccessfulFinish:
+        watcher.waitForSucceeded(timeoutMs, TimeUnit.MILLISECONDS);
+        return SuccessfulFinish;
+      case UnsuccessfulFinish:
+        watcher.waitForFailed(timeoutMs, TimeUnit.MILLISECONDS);
+        return UnsuccessfulFinish;
+      default:
+        throw new SamzaException("Unsupported application status type: " + status);
+    }
   }
 
   /**
    * {@inheritDoc}
    */
   public ApplicationStatus getStatus() {
-    return currentStatus;
-  }
-
-  private ApplicationStatus waitForStatus(Collection<ApplicationStatus> status, long timeoutMs) {
-    final long startTimeMs = System.currentTimeMillis();
-
-    while (System.currentTimeMillis() - startTimeMs < timeoutMs) {
-      if (status.contains(currentStatus)) {
-        return currentStatus;
-      }
-
-      try {
-        Thread.sleep(500);
-      } catch (InterruptedException e) {
-        return currentStatus;
-      }
+    Pod operatorPod = kubernetesClient.pods().inNamespace(nameSpace).withName(podName).get();
+    PodStatus podStatus = operatorPod.getStatus();
+    // TODO
+    switch (podStatus.getPhase()) {
+      case "Pending":
+        currentStatus = ApplicationStatus.New;
+        break;
+      case "Running":
+        currentStatus = Running;
+        break;
+      case "Completed":
+      case "Succeeded":
+        currentStatus = ApplicationStatus.SuccessfulFinish;
+        break;
+      case "Failed":
+        String err = new StringBuilder().append("Reason: ").append(podStatus.getReason())
+            .append("Conditions: ").append(podStatus.getConditions().toString()).toString();
+        currentStatus = ApplicationStatus.unsuccessfulFinish(new SamzaException(err));
+        break;
+      case "CrashLoopBackOff":
+      case "Unknown":
+      default:
+        currentStatus = ApplicationStatus.New;
     }
     return currentStatus;
   }
