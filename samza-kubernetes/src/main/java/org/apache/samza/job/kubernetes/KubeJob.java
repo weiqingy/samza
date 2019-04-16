@@ -20,7 +20,6 @@
 package org.apache.samza.job.kubernetes;
 
 import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -69,7 +68,11 @@ public class KubeJob implements StreamJob {
 
     // create Container
     String image = "xx";
-    Container container = KubeUtils.createContainer(SAMZA_AM_CONTAINER_NAME, image, request);
+    String fwkPath = config.get("samza.fwk.path", "");
+    String fwkVersion = config.get("samza.fwk.version");
+    String cmd = buildOperatorCmd(fwkPath, fwkVersion);
+    log.info(String.format("samza.fwk.path: %s. samza.fwk.version: %s. Command: %s", fwkPath, fwkVersion, cmd));
+    Container container = KubeUtils.createContainer(SAMZA_AM_CONTAINER_NAME, image , request, cmd);
 
     // create Pod
     String restartPolicy = "OnFailure";
@@ -147,5 +150,22 @@ public class KubeJob implements StreamJob {
         currentStatus = ApplicationStatus.New;
     }
     return currentStatus;
+  }
+
+  private String buildOperatorCmd(String fwkPath, String fwkVersion) {
+    // figure out if we have framework is deployed into a separate location
+    if (fwkVersion == null || fwkVersion.isEmpty()) {
+      fwkVersion = "STABLE";
+    }
+    log.info(String.format("Inside KubeJob: fwk_path is %s, ver is %s use it directly ", fwkPath, fwkVersion));
+
+    // default location
+    String cmdExec = "./__package/bin/run-jc.sh";
+    if (!fwkPath.isEmpty()) {
+      // if we have framework installed as a separate package - use it
+      cmdExec = fwkPath + "/" + fwkVersion + "/bin/run-jc.sh";
+    }
+    log.info("Inside KubeJob: cmdExec is: " + cmdExec);
+    return cmdExec;
   }
 }
