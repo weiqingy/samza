@@ -20,16 +20,25 @@
 package org.apache.samza.job.kubernetes;
 
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.samza.SamzaException;
 import org.apache.samza.clustermanager.ResourceRequestState;
 import org.apache.samza.clustermanager.SamzaResourceRequest;
 import org.apache.samza.config.Config;
+import org.apache.samza.config.MapConfig;
 import org.apache.samza.job.ApplicationStatus;
 import org.apache.samza.job.StreamJob;
+import org.apache.samza.serializers.model.SamzaObjectMapper;
+import org.apache.samza.util.CoordinatorStreamUtil;
+import org.apache.samza.util.Util;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.mutable.StringBuilder;
@@ -73,7 +82,7 @@ public class KubeJob implements StreamJob {
     String cmd = buildOperatorCmd(fwkPath, fwkVersion);
     log.info(String.format("samza.fwk.path: %s. samza.fwk.version: %s. Command: %s", fwkPath, fwkVersion, cmd));
     Container container = KubeUtils.createContainer(SAMZA_AM_CONTAINER_NAME, image , request, cmd);
-
+    container.setEnv(getEvns());
     // create Pod
     String restartPolicy = "OnFailure";
     Pod pod = KubeUtils.createPod(podName, restartPolicy, container);
@@ -167,5 +176,28 @@ public class KubeJob implements StreamJob {
     }
     log.info("Inside KubeJob: cmdExec is: " + cmdExec);
     return cmdExec;
+  }
+
+  private List<EnvVar> getEvns() {
+    MapConfig coordinatorSystemConfig = CoordinatorStreamUtil.buildCoordinatorStreamConfig(config);
+    List<EnvVar> envList = new ArrayList<>();
+    ObjectMapper objectMapper = SamzaObjectMapper.getObjectMapper();
+    String coordinatorSysConfig;
+    try  {
+      coordinatorSysConfig = objectMapper.writeValueAsString(coordinatorSystemConfig);
+    } catch (IOException ex) {
+      log.warn("No coordinator system configs!", ex);
+      coordinatorSysConfig = "";
+    }
+    envList.add(new EnvVar("SAMZA_COORDINATOR_SYSTEM_CONFIG", Util.envVarEscape(coordinatorSysConfig), null));
+
+    // TODO: "JAVA_OPTS" and "JAVA_HOME" are optional, but may need to set them later
+    // "JAVA_OPTS"
+    envList.add(new EnvVar("JAVA_OPTS", "", null));
+    // envMap.put("JAVA_OPTS", Util.envVarEscape(yarnConfig.getAmOpts));
+    // "JAVA_HOME"
+    // envMap.put("JAVA_HOME", yarnConfig.getAMJavaHome);
+
+    return envList;
   }
 }

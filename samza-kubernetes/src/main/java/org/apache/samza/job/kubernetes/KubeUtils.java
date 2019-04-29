@@ -20,7 +20,6 @@
 package org.apache.samza.job.kubernetes;
 
 import io.fabric8.kubernetes.api.model.*;
-import org.apache.samza.SamzaException;
 import org.apache.samza.clustermanager.SamzaResourceRequest;
 
 public class KubeUtils {
