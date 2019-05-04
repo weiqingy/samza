@@ -41,9 +41,9 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
 
   KubernetesClient client = null;
   private final Object lock = new Object();
-  private String jobId = "";
-  private String image = "";
-  private String namespace = "";
+  private String jobId = "001";
+  private String image = "weiqingyang/hello-samza:v6";
+  private String namespace = "samza";
   private OwnerReference ownerReference;
   private JobModelManager jobModelManager;
   private final Map<String, String> podLabels = new HashMap<>();
@@ -131,7 +131,6 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   private void createNewStreamProcessor(Pod pod) {
     int memory = Integer.valueOf(pod.getSpec().getContainers().get(0).getResources().getRequests().get("memory").getAmount());
     int cpu = Integer.valueOf(pod.getSpec().getContainers().get(0).getResources().getRequests().get("cpu").getAmount());
-
 
     String containerId = KubeUtils.getSamzaContainerNameFromPodName(pod.getMetadata().getName());
     // Find out previously running container location

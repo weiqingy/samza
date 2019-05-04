@@ -45,8 +45,8 @@ public class KubeUtils {
             .editOrNewSpec().withRestartPolicy(restartPolicy).addToContainers(container).endSpec().build();
   }
 
-  public static Pod createPod(String name, String restartPolicy, Container container) {
-    return new PodBuilder().editOrNewMetadata().withName(name).endMetadata()
+  public static Pod createPod(String name, String restartPolicy, Container container, String namespace) {
+    return new PodBuilder().editOrNewMetadata().withNamespace(namespace).withName(name).endMetadata()
             .editOrNewSpec().withRestartPolicy(restartPolicy).addToContainers(container).endSpec().build();
   }
 
@@ -55,7 +55,7 @@ public class KubeUtils {
             .withAmount(String.valueOf(resourceRequest.getMemoryMB())).withFormat("Mi").build();
     Quantity cpuQuantity = new QuantityBuilder(false)
             .withAmount(String.valueOf(resourceRequest.getNumCores())).build();
-    return new ContainerBuilder().withName(containerId).withImage(image).editOrNewResources()
+    return new ContainerBuilder().withName(containerId).withImage(image).withImagePullPolicy("Always").editOrNewResources()
             .addToRequests("memory", memQuantity).addToRequests("cpu", cpuQuantity).endResources().withCommand("sdfsfsdfs").build();
   }
 
@@ -66,7 +66,7 @@ public class KubeUtils {
         .withAmount(String.valueOf(resourceRequest.getMemoryMB())).withFormat("Mi").build();
     Quantity cpuQuantity = new QuantityBuilder(false)
         .withAmount(String.valueOf(resourceRequest.getNumCores())).build();
-    return new ContainerBuilder().withName(containerId).withImage(image).withCommand(cmd).editOrNewResources()
+    return new ContainerBuilder().withName(containerId).withImage(image).withImagePullPolicy("Always").withCommand(cmd).editOrNewResources()
         .addToRequests("memory", memQuantity).addToRequests("cpu", cpuQuantity).endResources().build();
   }
 
