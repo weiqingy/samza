@@ -43,6 +43,8 @@ import org.slf4j.LoggerFactory;
 import scala.collection.mutable.StringBuilder;
 
 import static org.apache.samza.config.KubeConfig.APP_IMAGE;
+import static org.apache.samza.config.KubeConfig.DEBUG_DELAY;
+import static org.apache.samza.config.KubeConfig.LOG_DIR;
 import static org.apache.samza.job.ApplicationStatus.*;
 import static org.apache.samza.job.kubernetes.KubeUtils.POD_NAME_FORMAT;
 import static org.apache.samza.job.kubernetes.KubeUtils.SAMZA_AM_CONTAINER_NAME_PREFIX;
@@ -170,15 +172,21 @@ public class KubeJob implements StreamJob {
     if (fwkVersion == null || fwkVersion.isEmpty()) {
       fwkVersion = "STABLE";
     }
-    log.info(String.format("Inside KubeJob: fwk_path is %s, ver is %s use it directly ", fwkPath, fwkVersion));
+    log.info(String.format("KubeJob: fwk_path is %s, ver is %s use it directly ", fwkPath, fwkVersion));
 
     // default location
+    // TODO provide a samza default container image
     String cmdExec = "/opt/hello-samza/bin/run-jc.sh";
     if (!fwkPath.isEmpty()) {
       // if we have framework installed as a separate package - use it
       cmdExec = fwkPath + "/" + fwkVersion + "/bin/run-jc.sh";
     }
-    log.info("Inside KubeJob: cmdExec is: " + cmdExec);
+
+    if (config.containsKey(DEBUG_DELAY)) {
+      long sleepTime = config.getInt(DEBUG_DELAY);
+      cmdExec += "; sleep " + sleepTime;
+    }
+    log.info("KubeJob: cmdExec is: " + cmdExec);
     return cmdExec;
   }
 
@@ -195,7 +203,7 @@ public class KubeJob implements StreamJob {
       coordinatorSysConfig = "";
     }
     envList.add(new EnvVar("SAMZA_COORDINATOR_SYSTEM_CONFIG", Util.envVarEscape(coordinatorSysConfig), null));
-    envList.add(new EnvVar("SAMZA_LOG_DIR", config.get("samza.log.dir"), null));
+    envList.add(new EnvVar("SAMZA_LOG_DIR", config.get(LOG_DIR), null));
     // TODO: "JAVA_OPTS" and "JAVA_HOME" are optional, but may need to set them later
     // "JAVA_OPTS"
     envList.add(new EnvVar("JAVA_OPTS", "", null));

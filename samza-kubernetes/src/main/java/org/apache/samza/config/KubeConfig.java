@@ -22,6 +22,12 @@ package org.apache.samza.config;
 public class KubeConfig {
 
   public static final String APP_IMAGE = "app.image";
+  public static final String LOG_DIR = "kube.samza.log.dir";
+
+  // The amount of time for container to remain after it exits.
+  public static final String DEBUG_DELAY = "kube.container.debug.delay";
+
+
   private static String K8S_API_NAMESPACE = "kubernetes.api.namespace";
   private static String K8S_POD_LABELS = "kubernetes.pod.labels";
   private Config config;

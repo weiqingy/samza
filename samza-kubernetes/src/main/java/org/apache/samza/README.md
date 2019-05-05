@@ -1,0 +1,5 @@
+- app.image 
+- kube.samza.log.dir 
+- kube.container.debug.delay
+- cluster-manager.container.memory.mb
+- cluster-manager.container.cpu.cores
