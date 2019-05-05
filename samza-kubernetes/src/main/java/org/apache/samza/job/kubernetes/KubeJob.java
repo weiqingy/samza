@@ -42,12 +42,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.mutable.StringBuilder;
 
+import static org.apache.samza.config.KubeConfig.APP_IMAGE;
 import static org.apache.samza.job.ApplicationStatus.*;
 import static org.apache.samza.job.kubernetes.KubeUtils.POD_NAME_FORMAT;
-import static org.apache.samza.job.kubernetes.KubeUtils.SAMZA_AM_CONTAINER_NAME;
+import static org.apache.samza.job.kubernetes.KubeUtils.SAMZA_AM_CONTAINER_NAME_PREFIX;
 import static org.apache.samza.serializers.model.SamzaObjectMapper.getObjectMapper;
 
-
+/**
+ * The client to start a Kubernetes job coordinator
+ */
 public class KubeJob implements StreamJob {
   private static final Logger log = LoggerFactory.getLogger(KubeJob.class);
   private Config config;
@@ -60,29 +63,29 @@ public class KubeJob implements StreamJob {
   public KubeJob(Config config) {
     this.kubernetesClient = KubeClientFactory.create();
     this.config = config;
-    this.podName = String.format(POD_NAME_FORMAT, SAMZA_AM_CONTAINER_NAME, config.get("job.id"));
+    this.podName = String.format(POD_NAME_FORMAT, SAMZA_AM_CONTAINER_NAME_PREFIX,
+            config.get("app.name"), config.get("app.id"));
     this.currentStatus = ApplicationStatus.New;
     this.watcher = new KubePodStatusWatcher(podName);
   }
 
   /**
-   * {@inheritDoc}
+   * submit the kubernetes job coordinator
    */
   public KubeJob submit() {
     // create SamzaResourceRequest
-    int numCores = 1;
-    int memoryMB = 500;
+    int memoryMB = config.getInt("cluster-manager.container.memory.mb", 1024);
+    int numCores = config.getInt("cluster-manager.container.cpu.cores", 1);
     String preferredHost = ResourceRequestState.ANY_HOST;
     SamzaResourceRequest request = new SamzaResourceRequest(numCores, memoryMB, preferredHost, podName);
 
     // create Container
-    String image = "weiqingyang/hello-samza:v6";
     String fwkPath = config.get("samza.fwk.path", "");
     String fwkVersion = config.get("samza.fwk.version");
-    String cmd = buildOperatorCmd(fwkPath, fwkVersion);
+    String cmd = buildJobCoordinatorCmd(fwkPath, fwkVersion);
     log.info(String.format("samza.fwk.path: %s. samza.fwk.version: %s. Command: %s", fwkPath, fwkVersion, cmd));
-    Container container = KubeUtils.createContainer(SAMZA_AM_CONTAINER_NAME, image , request, cmd);
-    container.setEnv(getEvns());
+    Container container = KubeUtils.createContainer(SAMZA_AM_CONTAINER_NAME_PREFIX, APP_IMAGE, request, cmd);
+    container.setEnv(getEnvs());
     // create Pod
     String restartPolicy = "OnFailure";
     Pod pod = KubeUtils.createPod(podName, restartPolicy, container, nameSpace);
@@ -93,7 +96,7 @@ public class KubeJob implements StreamJob {
   }
 
   /**
-   * {@inheritDoc}
+   * Kill the job coordinator pod
    */
   public KubeJob kill() {
     kubernetesClient.pods().withName(podName).delete();
@@ -101,7 +104,7 @@ public class KubeJob implements StreamJob {
   }
 
   /**
-   * {@inheritDoc}
+   * Wait for finish without timeout
    */
   public ApplicationStatus waitForFinish(long timeoutMs) {
     watcher.waitForCompleted(timeoutMs, TimeUnit.MILLISECONDS);
@@ -109,7 +112,7 @@ public class KubeJob implements StreamJob {
   }
 
   /**
-   * {@inheritDoc}
+   * Wait for the application to reach a status
    */
   public ApplicationStatus waitForStatus(ApplicationStatus status, long timeoutMs) {
     switch (status.getStatusCode()) {
@@ -131,7 +134,7 @@ public class KubeJob implements StreamJob {
   }
 
   /**
-   * {@inheritDoc}
+   * Get teh Status of the job coordinator pod
    */
   public ApplicationStatus getStatus() {
     Pod operatorPod = kubernetesClient.pods().inNamespace(nameSpace).withName(podName).get();
@@ -161,7 +164,8 @@ public class KubeJob implements StreamJob {
     return currentStatus;
   }
 
-  private String buildOperatorCmd(String fwkPath, String fwkVersion) {
+  // Build the job coordinator command
+  private String buildJobCoordinatorCmd(String fwkPath, String fwkVersion) {
     // figure out if we have framework is deployed into a separate location
     if (fwkVersion == null || fwkVersion.isEmpty()) {
       fwkVersion = "STABLE";
@@ -178,7 +182,8 @@ public class KubeJob implements StreamJob {
     return cmdExec;
   }
 
-  private List<EnvVar> getEvns() {
+  // Construct the envs for the job coordinator pod
+  private List<EnvVar> getEnvs() {
     MapConfig coordinatorSystemConfig = CoordinatorStreamUtil.buildCoordinatorStreamConfig(config);
     List<EnvVar> envList = new ArrayList<>();
     ObjectMapper objectMapper = getObjectMapper();
@@ -190,7 +195,7 @@ public class KubeJob implements StreamJob {
       coordinatorSysConfig = "";
     }
     envList.add(new EnvVar("SAMZA_COORDINATOR_SYSTEM_CONFIG", Util.envVarEscape(coordinatorSysConfig), null));
-
+    envList.add(new EnvVar("SAMZA_LOG_DIR", config.get("samza.log.dir"), null));
     // TODO: "JAVA_OPTS" and "JAVA_HOME" are optional, but may need to set them later
     // "JAVA_OPTS"
     envList.add(new EnvVar("JAVA_OPTS", "", null));

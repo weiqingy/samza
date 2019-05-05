@@ -20,6 +20,8 @@
 package org.apache.samza.config;
 
 public class KubeConfig {
+
+  public static final String APP_IMAGE = "app.image";
   private static String K8S_API_NAMESPACE = "kubernetes.api.namespace";
   private static String K8S_POD_LABELS = "kubernetes.pod.labels";
   private Config config;
