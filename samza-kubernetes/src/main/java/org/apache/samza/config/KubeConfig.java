@@ -23,13 +23,16 @@ public class KubeConfig {
 
   public static final String APP_IMAGE = "app.image";
   public static final String LOG_DIR = "kube.samza.log.dir";
-
+  public static final String K8S_API_NAMESPACE = "kube.api.namespace";
+  public static final String K8S_POD_LABELS = "kube.pod.labels";
   // The amount of time for container to remain after it exits.
   public static final String DEBUG_DELAY = "kube.container.debug.delay";
+  public static final String STREAM_PROCESSOR_CONTAINER_NAME = "stream-processor";
+  public static final String SAMZA_AM_CONTAINER_NAME_PREFIX = "jc";
+  public static final String POD_RESTART_POLICY = "Always";
+  public static final String MY_POD_NAME = "MY_POD_NAME";
+  public static final String POD_NAME_FORMAT = "%s-%s-%s";
 
-
-  private static String K8S_API_NAMESPACE = "kubernetes.api.namespace";
-  private static String K8S_POD_LABELS = "kubernetes.pod.labels";
   private Config config;
 
   public KubeConfig(Config config) {

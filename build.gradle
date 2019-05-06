@@ -572,6 +572,8 @@ project(":samza-kubernetes_$scalaSuffix") {
     compile project(":samza-core_$scalaSuffix")
     compile "org.codehaus.jackson:jackson-core-asl:1.9.7"
     compile group: 'io.fabric8', name: 'kubernetes-client', version: kubernetesJavaClientVersion
+    testCompile "junit:junit:$junitVersion"
+    testCompile "org.mockito:mockito-core:$mockitoVersion"
   }
 
   tasks.create(name: "releaseKubeTarGz", dependsOn: configurations.archives.artifacts, type: Tar) {

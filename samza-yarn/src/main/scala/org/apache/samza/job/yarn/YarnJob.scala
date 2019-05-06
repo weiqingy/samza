@@ -56,8 +56,8 @@ class YarnJob(config: Config, hadoopConfig: Configuration) extends StreamJob {
         Some({
           val coordinatorSystemConfig = CoordinatorStreamUtil.buildCoordinatorStreamConfig(config)
           val envMap = Map(
-            ShellCommandConfig.ENV_COORDINATOR_SYSTEM_CONFIG -> Util.envVarEscape(SamzaObjectMapper.getObjectMapper.writeValueAsString
-            (coordinatorSystemConfig)),
+            ShellCommandConfig.ENV_COORDINATOR_SYSTEM_CONFIG ->
+              Util.envVarEscape(SamzaObjectMapper.getObjectMapper.writeValueAsString(coordinatorSystemConfig)),
             ShellCommandConfig.ENV_JAVA_OPTS -> Util.envVarEscape(yarnConfig.getAmOpts))
           val amJavaHome = yarnConfig.getAMJavaHome
           val envMapWithJavaHome = if (amJavaHome == null) {

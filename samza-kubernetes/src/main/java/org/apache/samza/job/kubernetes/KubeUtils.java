@@ -24,15 +24,6 @@ import org.apache.samza.clustermanager.SamzaResourceRequest;
 
 public class KubeUtils {
 
-  public static final String STREAM_PROCESSOR_CONTAINER_NAME = "stream-processor";
-  public static final String SAMZA_AM_CONTAINER_NAME_PREFIX = "jc";
-
-  public static final String POD_RESTART_POLICY = "Always";
-  public static final String MY_POD_NAME = "MY_POD_NAME";
-  //jobId-containerId
-  public static final String POD_NAME_FORMAT = "%s-%s-%s";
-
-
   public static String getSamzaContainerNameFromPodName(String podName) {
     //jobId-containerId
     String[] splits = podName.split("-");

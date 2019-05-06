@@ -385,6 +385,8 @@ public class ClusterBasedJobCoordinator {
     try {
       //Read and parse the coordinator system config.
       log.info("Parsing coordinator system config {}", coordinatorSystemEnv);
+
+      System.out.println(coordinatorSystemEnv);
       coordinatorSystemConfig =
           new MapConfig(SamzaObjectMapper.getObjectMapper().readValue(coordinatorSystemEnv, Config.class));
     } catch (IOException e) {

@@ -22,11 +22,15 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.samza.clustermanager.ClusterBasedJobCoordinator;
 import org.apache.samza.config.Config;
 import org.apache.samza.config.MapConfig;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.assertEquals;
 
 public class TestLocalizerResourceConfig {

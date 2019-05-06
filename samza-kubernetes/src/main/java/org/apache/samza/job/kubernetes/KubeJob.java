@@ -42,12 +42,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.mutable.StringBuilder;
 
-import static org.apache.samza.config.KubeConfig.APP_IMAGE;
-import static org.apache.samza.config.KubeConfig.DEBUG_DELAY;
-import static org.apache.samza.config.KubeConfig.LOG_DIR;
+import static org.apache.samza.config.ApplicationConfig.*;
+import static org.apache.samza.config.KubeConfig.*;
 import static org.apache.samza.job.ApplicationStatus.*;
-import static org.apache.samza.job.kubernetes.KubeUtils.POD_NAME_FORMAT;
-import static org.apache.samza.job.kubernetes.KubeUtils.SAMZA_AM_CONTAINER_NAME_PREFIX;
 import static org.apache.samza.serializers.model.SamzaObjectMapper.getObjectMapper;
 
 /**
@@ -59,16 +56,19 @@ public class KubeJob implements StreamJob {
   private KubernetesClient kubernetesClient;
   private String podName;
   private ApplicationStatus currentStatus;
-  private String nameSpace = "samza";
+  private String nameSpace;
   private KubePodStatusWatcher watcher;
+  private String image;
 
   public KubeJob(Config config) {
     this.kubernetesClient = KubeClientFactory.create();
     this.config = config;
     this.podName = String.format(POD_NAME_FORMAT, SAMZA_AM_CONTAINER_NAME_PREFIX,
-            config.get("app.name"), config.get("app.id"));
+            config.get(APP_NAME, "samza"), config.get(APP_ID, "1"));
     this.currentStatus = ApplicationStatus.New;
     this.watcher = new KubePodStatusWatcher(podName);
+    this.nameSpace = config.get(K8S_API_NAMESPACE, "default");
+    this.image = config.get(APP_IMAGE, "weiqingyang/hello-samza:v6");
   }
 
   /**
@@ -86,7 +86,7 @@ public class KubeJob implements StreamJob {
     String fwkVersion = config.get("samza.fwk.version");
     String cmd = buildJobCoordinatorCmd(fwkPath, fwkVersion);
     log.info(String.format("samza.fwk.path: %s. samza.fwk.version: %s. Command: %s", fwkPath, fwkVersion, cmd));
-    Container container = KubeUtils.createContainer(SAMZA_AM_CONTAINER_NAME_PREFIX, APP_IMAGE, request, cmd);
+    Container container = KubeUtils.createContainer(nameSpace, image, request, cmd);
     container.setEnv(getEnvs());
     // create Pod
     String restartPolicy = "OnFailure";
@@ -175,7 +175,6 @@ public class KubeJob implements StreamJob {
     log.info(String.format("KubeJob: fwk_path is %s, ver is %s use it directly ", fwkPath, fwkVersion));
 
     // default location
-    // TODO provide a samza default container image
     String cmdExec = "/opt/hello-samza/bin/run-jc.sh";
     if (!fwkPath.isEmpty()) {
       // if we have framework installed as a separate package - use it
@@ -204,6 +203,9 @@ public class KubeJob implements StreamJob {
     }
     envList.add(new EnvVar("SAMZA_COORDINATOR_SYSTEM_CONFIG", Util.envVarEscape(coordinatorSysConfig), null));
     envList.add(new EnvVar("SAMZA_LOG_DIR", config.get(LOG_DIR), null));
+    log.info("======================================");
+    log.info(Util.envVarEscape(coordinatorSysConfig));
+    log.info("======================================");
     // TODO: "JAVA_OPTS" and "JAVA_HOME" are optional, but may need to set them later
     // "JAVA_OPTS"
     envList.add(new EnvVar("JAVA_OPTS", "", null));

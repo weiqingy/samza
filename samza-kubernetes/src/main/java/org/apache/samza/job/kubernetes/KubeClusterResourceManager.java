@@ -34,16 +34,17 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.apache.samza.job.kubernetes.KubeUtils.*;
+import static org.apache.samza.config.ApplicationConfig.*;
+import static org.apache.samza.config.KubeConfig.*;
 
 public class KubeClusterResourceManager extends ClusterResourceManager {
   private static final Logger log = LoggerFactory.getLogger(KubeClusterResourceManager.class);
 
   KubernetesClient client = null;
   private final Object lock = new Object();
-  private String jobId = "001";
-  private String image = "weiqingyang/hello-samza:v6";
-  private String namespace = "samza";
+  private String appId;
+  private String image;
+  private String namespace;
   private OwnerReference ownerReference;
   private JobModelManager jobModelManager;
   private final Map<String, String> podLabels = new HashMap<>();
@@ -55,6 +56,9 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     client = KubeClientFactory.create();
     createOwnerReferences();
     this.jobModelManager = jobModelManager;
+    this.image = config.get(APP_IMAGE, "weiqingyang/hello-samza:v6");
+    this.namespace = config.get(K8S_API_NAMESPACE, "default");
+    this.appId = config.get(APP_ID, "001");
     ClusterManagerConfig clusterManagerConfig = new ClusterManagerConfig(config);
     this.hostAffinityEnabled = clusterManagerConfig.getHostAffinityEnabled();
 
@@ -148,7 +152,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     log.info("Requesting resources on " + resourceRequest.getPreferredHost() + " for container " + resourceRequest.getContainerID());
     Container container = KubeUtils.createContainer(STREAM_PROCESSOR_CONTAINER_NAME, image, resourceRequest);
     PodBuilder podBuilder = new PodBuilder().editOrNewMetadata()
-            .withName(String.format(POD_NAME_FORMAT, jobId, resourceRequest.getContainerID()))
+            .withName(String.format(POD_NAME_FORMAT, appId, resourceRequest.getContainerID()))
             .withOwnerReferences(ownerReference)
             .addToLabels(podLabels).endMetadata()
             .editOrNewSpec()
