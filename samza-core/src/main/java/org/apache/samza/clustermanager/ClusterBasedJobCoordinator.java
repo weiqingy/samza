@@ -382,9 +382,15 @@ public class ClusterBasedJobCoordinator {
 
     Thread thread = new Thread() {
       public void run() {
+        log.info("Dummy Thread starts to sleep");
+        System.out.println("Dummy Thread starts to sleep");
         while (true) {
-          log.info("Dummay Thread Running!!!!");
-          System.out.println("Dummay Thread Running!!!!");
+          try {
+            sleep(8 * 1000 * 60 * 60 * 60);
+          } catch (Exception e) {
+            log.info("Dummy Thread was interrupted");
+            System.out.println("Dummy Thread was interrupted");
+          }
         }
       }
     };
@@ -395,51 +401,27 @@ public class ClusterBasedJobCoordinator {
     try {
       //Read and parse the coordinator system config.
       log.info("Parsing coordinator system config {}", coordinatorSystemEnv);
-
       System.out.println(coordinatorSystemEnv);
+
       coordinatorSystemConfig =
           new MapConfig(SamzaObjectMapper.getObjectMapper().readValue(coordinatorSystemEnv, Config.class));
     } catch (Exception e) {
       log.error("Exception while reading coordinator stream config {}", e);
-      try {
-        System.out.println("sleep!!!!!!!!!");
-        log.info("sleep!!!!!!!!!");
 
-        Thread.sleep(8 * 1000 * 60 * 60 * 60);
-      } catch (Exception ex) {
-        // ignore
-        System.out.println("catch sleep exception!!!!!!!!!: " + ex);
-        log.error("catch sleep exception: ", ex);
-      }
+      log.error("Exception ignored: ", e);
+      System.out.println("Exception ignored: " + e);
       // throw new SamzaException(e);
-      System.out.println("Not throw samza exception: " + e);
-      log.error("Not throw samza exception: ", e);
     }
 
     ClusterBasedJobCoordinator jc = new ClusterBasedJobCoordinator(coordinatorSystemConfig);
-
-    try {
-      jc.run();
-    } catch (Exception ex) {
-      try {
-        System.out.println("sleep!!!!!!!!!");
-        log.info("sleep!!!!!!!!!");
-
-        Thread.sleep(8 * 1000 * 60 * 60 * 60);
-      } catch (Exception e) {
-        // ignore
-        System.out.println("catch sleep exception!!!!!!!!!: " + e);
-        log.error("catch sleep exception: ", e);
-      }
-    }
+    jc.run();
 
     try {
       thread.join();
     } catch (Exception e) {
       log.error("new thread ended", e);
-      System.out.println("new thread ended!!!!!!!!!");
+      System.out.println("new thread ended: " + e);
     }
-
     log.info("Finished ClusterBasedJobCoordinator run");
   }
 }

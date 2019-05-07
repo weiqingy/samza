@@ -60,8 +60,6 @@ public class KubeUtils {
         .withAmount(String.valueOf(resourceRequest.getNumCores())).build();
     return new ContainerBuilder().withName(containerId).withImage(image).withImagePullPolicy("Always").withCommand(cmd).editOrNewResources()
       .addToRequests("memory", memQuantity).addToRequests("cpu", cpuQuantity).endResources().build();
-    // return new ContainerBuilder().withName(containerId).withImage(image).withImagePullPolicy("Always").editOrNewResources()
-    //  .addToRequests("memory", memQuantity).addToRequests("cpu", cpuQuantity).endResources().build();
   }
 
   // TODO: will add util methods describing details about Pod status and container status. Refer to Spark'KubernetesUtils.
