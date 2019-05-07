@@ -86,7 +86,7 @@ public class KubeJob implements StreamJob {
     String fwkVersion = config.get("samza.fwk.version");
     String cmd = buildJobCoordinatorCmd(fwkPath, fwkVersion);
     log.info(String.format("samza.fwk.path: %s. samza.fwk.version: %s. Command: %s", fwkPath, fwkVersion, cmd));
-    Container container = KubeUtils.createContainer(nameSpace, image, request, cmd);
+    Container container = KubeUtils.createContainer(SAMZA_AM_CONTAINER_NAME_PREFIX, image, request, cmd);
     container.setEnv(getEnvs());
     // create Pod
     String restartPolicy = "OnFailure";
@@ -175,18 +175,23 @@ public class KubeJob implements StreamJob {
     log.info(String.format("KubeJob: fwk_path is %s, ver is %s use it directly ", fwkPath, fwkVersion));
 
     // default location
-    String cmdExec = "/opt/hello-samza/bin/run-jc.sh";
+    String cmdExec1 = "/opt/hello-samza/bin/run-jc.sh";
     if (!fwkPath.isEmpty()) {
       // if we have framework installed as a separate package - use it
-      cmdExec = fwkPath + "/" + fwkVersion + "/bin/run-jc.sh";
+      cmdExec1 = fwkPath + "/" + fwkVersion + "/bin/run-jc.sh";
     }
+    /*cmdExec1 = "/bin/bash -c \"" + cmdExec1 + "\"";
 
+    String cmdExec2 = "";
     if (config.containsKey(DEBUG_DELAY)) {
       long sleepTime = config.getInt(DEBUG_DELAY);
-      cmdExec += "; sleep " + sleepTime;
+      cmdExec2 = "; sleep " + sleepTime;
     }
-    log.info("KubeJob: cmdExec is: " + cmdExec);
-    return cmdExec;
+
+    String commands = "/bin/bash -c '" + cmdExec1 + cmdExec2 + "'";
+    log.info("KubeJob: cmdExec is: " + commands);*/
+
+    return cmdExec1;
   }
 
   // Construct the envs for the job coordinator pod

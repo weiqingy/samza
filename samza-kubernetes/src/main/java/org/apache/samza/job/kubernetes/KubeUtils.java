@@ -20,6 +20,7 @@
 package org.apache.samza.job.kubernetes;
 
 import io.fabric8.kubernetes.api.model.*;
+import java.util.List;
 import org.apache.samza.clustermanager.SamzaResourceRequest;
 
 public class KubeUtils {
@@ -58,7 +59,9 @@ public class KubeUtils {
     Quantity cpuQuantity = new QuantityBuilder(false)
         .withAmount(String.valueOf(resourceRequest.getNumCores())).build();
     return new ContainerBuilder().withName(containerId).withImage(image).withImagePullPolicy("Always").withCommand(cmd).editOrNewResources()
-        .addToRequests("memory", memQuantity).addToRequests("cpu", cpuQuantity).endResources().build();
+      .addToRequests("memory", memQuantity).addToRequests("cpu", cpuQuantity).endResources().build();
+    // return new ContainerBuilder().withName(containerId).withImage(image).withImagePullPolicy("Always").editOrNewResources()
+    //  .addToRequests("memory", memQuantity).addToRequests("cpu", cpuQuantity).endResources().build();
   }
 
   // TODO: will add util methods describing details about Pod status and container status. Refer to Spark'KubernetesUtils.
