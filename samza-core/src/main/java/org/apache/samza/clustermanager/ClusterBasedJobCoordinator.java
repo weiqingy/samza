@@ -401,10 +401,13 @@ public class ClusterBasedJobCoordinator {
     try {
       //Read and parse the coordinator system config.
       log.info("Parsing coordinator system config {}", coordinatorSystemEnv);
-      System.out.println(coordinatorSystemEnv);
+      System.out.println("Coordinator system config: " + coordinatorSystemEnv);
+      String correctedCoordinatorSystemEnv = coordinatorSystemEnv.replace("\\\"", "\"");
+      log.info("Corrected coordinator system config {}", correctedCoordinatorSystemEnv);
+      System.out.println("Corrected coordinator system config: " + correctedCoordinatorSystemEnv);
 
       coordinatorSystemConfig =
-          new MapConfig(SamzaObjectMapper.getObjectMapper().readValue(coordinatorSystemEnv, Config.class));
+          new MapConfig(SamzaObjectMapper.getObjectMapper().readValue(correctedCoordinatorSystemEnv, Config.class));
     } catch (Exception e) {
       log.error("Exception while reading coordinator stream config {}", e);
 
@@ -422,6 +425,7 @@ public class ClusterBasedJobCoordinator {
       log.error("new thread ended", e);
       System.out.println("new thread ended: " + e);
     }
+
     log.info("Finished ClusterBasedJobCoordinator run");
   }
 }
