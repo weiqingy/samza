@@ -23,14 +23,20 @@ import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class KubeClientFactory {
+  private static final Logger log = LoggerFactory.getLogger(KubeClusterResourceManager.class);
 
   public static KubernetesClient create() {
+    log.info("Creating an instance of a Kubernetes client. ");
     ConfigBuilder builder = new ConfigBuilder();
     Config config = builder.build();
-
     KubernetesClient client = new DefaultKubernetesClient(config);
+    log.info("Kubernetes client created. ");
+
     return client;
   }
 }

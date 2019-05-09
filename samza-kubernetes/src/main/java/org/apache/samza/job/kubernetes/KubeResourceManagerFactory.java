@@ -36,6 +36,7 @@ public class KubeResourceManagerFactory implements ResourceManagerFactory {
     JobModelManager jobModelManager = state.jobModelManager;
     Config config = jobModelManager.jobModel().getConfig();
     KubeClusterResourceManager manager = new KubeClusterResourceManager(config, jobModelManager, callback, state);
+    log.info("KubeClusterResourceManager created");
     return manager;
   }
 }

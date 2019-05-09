@@ -40,18 +40,18 @@ import static org.apache.samza.config.KubeConfig.*;
 public class KubeClusterResourceManager extends ClusterResourceManager {
   private static final Logger log = LoggerFactory.getLogger(KubeClusterResourceManager.class);
 
-  KubernetesClient client = null;
   private final Object lock = new Object();
+  private final Map<String, String> podLabels = new HashMap<>();
+  private KubernetesClient client;
   private String appId;
   private String image;
   private String namespace;
   private OwnerReference ownerReference;
   private JobModelManager jobModelManager;
-  private final Map<String, String> podLabels = new HashMap<>();
   private boolean hostAffinityEnabled = false;
 
   KubeClusterResourceManager(Config config, JobModelManager jobModelManager,
-                             ClusterResourceManager.Callback callback, SamzaApplicationState samzaAppState ) {
+                             ClusterResourceManager.Callback callback, SamzaApplicationState samzaAppState) {
     super(callback);
     client = KubeClientFactory.create();
     createOwnerReferences();
@@ -61,7 +61,6 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     this.appId = config.get(APP_ID, "001");
     ClusterManagerConfig clusterManagerConfig = new ClusterManagerConfig(config);
     this.hostAffinityEnabled = clusterManagerConfig.getHostAffinityEnabled();
-
   }
 
   @Override
@@ -72,8 +71,12 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
 
   // Create the owner reference of the samaza-operator pod
   private void createOwnerReferences() {
-    // The operator pod yaml needs to pass in MY_POD_NAME env
-    String thisPodName = System.getenv(MY_POD_NAME);
+    // The operator pod yaml needs to pass in OPERATOR_POD_NAME env
+    log.info("Start to run createOwnerReferences");
+    System.out.println("Start to run createOwnerReferences");
+    String thisPodName = System.getenv(OPERATOR_POD_NAME);
+    log.info("[In createOwnerReferences()] OPERATOR_POD_NAME: " + thisPodName);
+    System.out.println("[In createOwnerReferences()] OPERATOR_POD_NAME: " + thisPodName);
     Pod pod = client.pods().inNamespace(namespace).withName(thisPodName).get();
     ownerReference = new OwnerReferenceBuilder()
           .withName(pod.getMetadata().getName())

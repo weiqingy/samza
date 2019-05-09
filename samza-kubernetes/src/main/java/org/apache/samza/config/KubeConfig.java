@@ -22,7 +22,7 @@ package org.apache.samza.config;
 public class KubeConfig {
 
   public static final String APP_IMAGE = "app.image";
-  public static final String LOG_DIR = "kube.samza.log.dir";
+  public static final String SAMZA_LOG_DIR = "kube.samza.log.dir";
   public static final String K8S_API_NAMESPACE = "kube.api.namespace";
   public static final String K8S_POD_LABELS = "kube.pod.labels";
   // The amount of time for container to remain after it exits.
@@ -30,8 +30,9 @@ public class KubeConfig {
   public static final String STREAM_PROCESSOR_CONTAINER_NAME = "stream-processor";
   public static final String SAMZA_AM_CONTAINER_NAME_PREFIX = "jc";
   public static final String POD_RESTART_POLICY = "Always";
-  public static final String MY_POD_NAME = "MY_POD_NAME";
   public static final String POD_NAME_FORMAT = "%s-%s-%s";
+  // Environment variable
+  public static final String OPERATOR_POD_NAME = "OPERATOR_POD_NAME";
 
   private Config config;
 
