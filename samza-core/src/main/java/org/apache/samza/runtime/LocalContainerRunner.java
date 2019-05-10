@@ -19,7 +19,6 @@
 
 package org.apache.samza.runtime;
 
-import org.apache.samza.SamzaException;
 import org.apache.samza.application.ApplicationUtil;
 import org.apache.samza.application.descriptors.ApplicationDescriptor;
 import org.apache.samza.application.descriptors.ApplicationDescriptorImpl;
@@ -42,36 +41,62 @@ public class LocalContainerRunner {
   private static final Logger log = LoggerFactory.getLogger(LocalContainerRunner.class);
 
   public static void main(String[] args) throws Exception {
+    Thread thread = new Thread() {
+      public void run() {
+        log.info("Dummy Thread starts to sleep");
+        System.out.println("Dummy Thread starts to sleep");
+        while (true) {
+          try {
+            sleep(8 * 1000 * 60 * 60 * 60);
+          } catch (Exception e) {
+            log.info("Dummy Thread was interrupted");
+            System.out.println("Dummy Thread was interrupted");
+          }
+        }
+      }
+    };
+    thread.start();
+
     Thread.setDefaultUncaughtExceptionHandler(
         new SamzaUncaughtExceptionHandler(() -> {
           log.info("Exiting process now.");
           System.exit(1);
         }));
 
-    String containerId = System.getenv(ShellCommandConfig.ENV_CONTAINER_ID());
-    log.info(String.format("Got container ID: %s", containerId));
-    System.out.println(String.format("Container ID: %s", containerId));
+    try {
+      String containerId = System.getenv(ShellCommandConfig.ENV_CONTAINER_ID());
+      log.info(String.format("Got container ID: %s", containerId));
+      System.out.println(String.format("Container ID: %s", containerId));
 
-    String coordinatorUrl = System.getenv(ShellCommandConfig.ENV_COORDINATOR_URL());
-    log.info(String.format("Got coordinator URL: %s", coordinatorUrl));
-    System.out.println(String.format("Coordinator URL: %s", coordinatorUrl));
+      String coordinatorUrl = System.getenv(ShellCommandConfig.ENV_COORDINATOR_URL());
+      log.info(String.format("Got coordinator URL: %s", coordinatorUrl));
+      System.out.println(String.format("Coordinator URL: %s", coordinatorUrl));
 
-    int delay = new Random().nextInt(SamzaContainer.DEFAULT_READ_JOBMODEL_DELAY_MS()) + 1;
-    JobModel jobModel = SamzaContainer.readJobModel(coordinatorUrl, delay);
-    Config config = jobModel.getConfig();
-    JobConfig jobConfig = new JobConfig(config);
-    if (jobConfig.getName().isEmpty()) {
-      throw new SamzaException("can not find the job name");
+      int delay = new Random().nextInt(SamzaContainer.DEFAULT_READ_JOBMODEL_DELAY_MS()) + 1;
+      JobModel jobModel = SamzaContainer.readJobModel(coordinatorUrl, delay);
+      Config config = jobModel.getConfig();
+      JobConfig jobConfig = new JobConfig(config);
+      if (jobConfig.getName().isEmpty()) {
+        // throw new SamzaException("can not find the job name");
+        log.error("can not find the job name");
+        System.out.println("can not find the job name");
+      }
+      String jobName = jobConfig.getName().get();
+      String jobId = jobConfig.getJobId();
+      MDC.put("containerName", "samza-container-" + containerId);
+      MDC.put("jobName", jobName);
+      MDC.put("jobId", jobId);
+
+      ApplicationDescriptorImpl<? extends ApplicationDescriptor> appDesc =
+          ApplicationDescriptorUtil.getAppDescriptor(ApplicationUtil.fromConfig(config), config);
+
+      ContainerLaunchUtil.run(appDesc, containerId, jobModel);
+    } catch (Exception ex) {
+      // ignored.
+      log.error("LocalContainerRunner throw exception: ", ex);
+      System.out.println("LocalContainerRunner throw exception: " + ex);
     }
-    String jobName = jobConfig.getName().get();
-    String jobId = jobConfig.getJobId();
-    MDC.put("containerName", "samza-container-" + containerId);
-    MDC.put("jobName", jobName);
-    MDC.put("jobId", jobId);
 
-    ApplicationDescriptorImpl<? extends ApplicationDescriptor> appDesc =
-        ApplicationDescriptorUtil.getAppDescriptor(ApplicationUtil.fromConfig(config), config);
-
-    ContainerLaunchUtil.run(appDesc, containerId, jobModel);
+    thread.join();
   }
 }

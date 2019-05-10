@@ -25,9 +25,13 @@ import io.fabric8.kubernetes.client.Watcher;
 import org.apache.samza.clustermanager.*;
 import org.apache.samza.config.ClusterManagerConfig;
 import org.apache.samza.config.Config;
+import org.apache.samza.config.JobConfig;
+import org.apache.samza.config.TaskConfig;
 import org.apache.samza.coordinator.JobModelManager;
 import org.apache.samza.coordinator.stream.messages.SetContainerHostMapping;
 import org.apache.samza.job.CommandBuilder;
+import org.apache.samza.job.ShellCommandBuilder;
+import org.apache.samza.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,23 +48,27 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   private final Map<String, String> podLabels = new HashMap<>();
   private KubernetesClient client;
   private String appId;
+  private String appName;
   private String image;
   private String namespace;
   private OwnerReference ownerReference;
   private JobModelManager jobModelManager;
   private boolean hostAffinityEnabled = false;
+  private Config config;
 
   KubeClusterResourceManager(Config config, JobModelManager jobModelManager,
                              ClusterResourceManager.Callback callback, SamzaApplicationState samzaAppState) {
     super(callback);
-    client = KubeClientFactory.create();
-    createOwnerReferences();
+    this.config = config;
+    this.client = KubeClientFactory.create();
     this.jobModelManager = jobModelManager;
     this.image = config.get(APP_IMAGE, "weiqingyang/hello-samza:v6");
     this.namespace = config.get(K8S_API_NAMESPACE, "default");
     this.appId = config.get(APP_ID, "001");
+    this.appName = config.get(APP_NAME, "samza");
     ClusterManagerConfig clusterManagerConfig = new ClusterManagerConfig(config);
     this.hostAffinityEnabled = clusterManagerConfig.getHostAffinityEnabled();
+    createOwnerReferences();
   }
 
   @Override
@@ -74,14 +82,24 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     // The operator pod yaml needs to pass in OPERATOR_POD_NAME env
     log.info("Start to run createOwnerReferences");
     System.out.println("Start to run createOwnerReferences");
+
     String thisPodName = System.getenv(OPERATOR_POD_NAME);
+
     log.info("[In createOwnerReferences()] OPERATOR_POD_NAME: " + thisPodName);
     System.out.println("[In createOwnerReferences()] OPERATOR_POD_NAME: " + thisPodName);
+
+    log.info("namespace is: " + namespace);
     Pod pod = client.pods().inNamespace(namespace).withName(thisPodName).get();
+    if (pod == null) {
+      log.error("[In createOwnerReferences] Pod is null");
+    }
+    log.error("pod.getMetadata().getName is: {}; pod.getApiVersion is: {}; Uid is: {}; Kind is: {}",
+        pod.getMetadata().getName(), pod.getApiVersion(), pod.getMetadata().getUid(), pod.getKind());
     ownerReference = new OwnerReferenceBuilder()
           .withName(pod.getMetadata().getName())
           .withApiVersion(pod.getApiVersion())
-          .withUid(pod.getMetadata().getUid()).withKind(pod.getKind())
+          .withUid(pod.getMetadata().getUid())
+          .withKind(pod.getKind())
           .withController(true).build();
   }
 
@@ -152,10 +170,13 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
 
   @Override
   public void requestResources(SamzaResourceRequest resourceRequest) {
-    log.info("Requesting resources on " + resourceRequest.getPreferredHost() + " for container " + resourceRequest.getContainerID());
-    Container container = KubeUtils.createContainer(STREAM_PROCESSOR_CONTAINER_NAME, image, resourceRequest);
+    String containerId = resourceRequest.getContainerID();
+    log.info("Requesting resources on " + resourceRequest.getPreferredHost() + " for container " + containerId);
+    String command = buildCmd(containerId);
+    log.info("Container ID {} using command {}", containerId, command);
+    Container container = KubeUtils.createContainer(STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, image, resourceRequest, command);
     PodBuilder podBuilder = new PodBuilder().editOrNewMetadata()
-            .withName(String.format(POD_NAME_FORMAT, appId, resourceRequest.getContainerID()))
+            .withName(String.format(TASK_POD_NAME_FORMAT, STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, appName, appId, containerId))
             .withOwnerReferences(ownerReference)
             .addToLabels(podLabels).endMetadata()
             .editOrNewSpec()
@@ -203,5 +224,34 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   @Override
   public void stop(SamzaApplicationState.SamzaAppStatus status) {
     log.info("Kubernetes Cluster ResourceManager stopped");
+  }
+
+  private String buildCmd(String containerId) {
+    // TODO: check if we have framework path specified. If yes - use it, if not use default /opt/hello-samza/
+    String jobLib = ""; // in case of separate framework, this directory will point at the job's libraries
+    String cmdPath = "/opt/hello-samza/";
+
+    String fwkPath = JobConfig.getFwkPath(config);
+    if(fwkPath != null && (! fwkPath.isEmpty())) {
+      cmdPath = fwkPath;
+      jobLib = "export JOB_LIB_DIR=/opt/hello-samza/lib";
+    }
+    log.info("In runContainer in util: fwkPath= " + fwkPath + ";cmdPath=" + cmdPath + ";jobLib=" + jobLib);
+
+    CommandBuilder cmdBuilder = getCommandBuilder(containerId);
+    cmdBuilder.setCommandPath(cmdPath);
+
+    return cmdBuilder.buildCommand();
+  }
+
+  // TODO: Need to check it again later!! Check AbstractContainerAllocator.getCommandBuilder(samzaContainerId)
+  private CommandBuilder getCommandBuilder(String containerId) {
+    TaskConfig taskConfig = new TaskConfig(config);
+    String cmdBuilderClassName = taskConfig.getCommandClass(ShellCommandBuilder.class.getName());
+    log.info("cmdBuilderClassName is: {}", cmdBuilderClassName);
+    CommandBuilder cmdBuilder = Util.getObj(cmdBuilderClassName, CommandBuilder.class);
+    cmdBuilder.setConfig(config).setId(containerId);
+
+    return cmdBuilder;
   }
 }

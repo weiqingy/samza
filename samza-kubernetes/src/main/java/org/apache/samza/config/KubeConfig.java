@@ -27,10 +27,11 @@ public class KubeConfig {
   public static final String K8S_POD_LABELS = "kube.pod.labels";
   // The amount of time for container to remain after it exits.
   public static final String DEBUG_DELAY = "kube.container.debug.delay";
-  public static final String STREAM_PROCESSOR_CONTAINER_NAME = "stream-processor";
-  public static final String SAMZA_AM_CONTAINER_NAME_PREFIX = "jc";
+  public static final String STREAM_PROCESSOR_CONTAINER_NAME_PREFIX = "stream-processor";
+  public static final String SAMZA_OPERATOR_CONTAINER_NAME_PREFIX = "jc";
   public static final String POD_RESTART_POLICY = "Always";
-  public static final String POD_NAME_FORMAT = "%s-%s-%s";
+  public static final String OPERATOR_POD_NAME_FORMAT = "%s-%s-%s"; // jc-appName-appId
+  public static final String TASK_POD_NAME_FORMAT = "%s-%s-%s-%s"; // streamProcessor-appName-appId-containerId
   // Environment variable
   public static final String OPERATOR_POD_NAME = "OPERATOR_POD_NAME";
 

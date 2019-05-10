@@ -63,7 +63,7 @@ public class KubeJob implements StreamJob {
   public KubeJob(Config config) {
     this.kubernetesClient = KubeClientFactory.create();
     this.config = config;
-    this.podName = String.format(POD_NAME_FORMAT, SAMZA_AM_CONTAINER_NAME_PREFIX,
+    this.podName = String.format(OPERATOR_POD_NAME_FORMAT, SAMZA_OPERATOR_CONTAINER_NAME_PREFIX,
             config.get(APP_NAME, "samza"), config.get(APP_ID, "1"));
     this.currentStatus = ApplicationStatus.New;
     this.watcher = new KubePodStatusWatcher(podName);
@@ -86,7 +86,7 @@ public class KubeJob implements StreamJob {
     String fwkVersion = config.get("samza.fwk.version");
     String cmd = buildJobCoordinatorCmd(fwkPath, fwkVersion);
     log.info(String.format("samza.fwk.path: %s. samza.fwk.version: %s. Command: %s", fwkPath, fwkVersion, cmd));
-    Container container = KubeUtils.createContainer(SAMZA_AM_CONTAINER_NAME_PREFIX, image, request, cmd);
+    Container container = KubeUtils.createContainer(SAMZA_OPERATOR_CONTAINER_NAME_PREFIX, image, request, cmd);
     container.setEnv(getEnvs());
     // create Pod
     String restartPolicy = "OnFailure";
@@ -180,14 +180,13 @@ public class KubeJob implements StreamJob {
       // if we have framework installed as a separate package - use it
       cmdExec1 = fwkPath + "/" + fwkVersion + "/bin/run-jc.sh";
     }
-    /*cmdExec1 = "/bin/bash -c \"" + cmdExec1 + "\"";
 
+    /*cmdExec1 = "/bin/bash -c \"" + cmdExec1 + "\"";
     String cmdExec2 = "";
     if (config.containsKey(DEBUG_DELAY)) {
       long sleepTime = config.getInt(DEBUG_DELAY);
       cmdExec2 = "; sleep " + sleepTime;
     }
-
     String commands = "/bin/bash -c '" + cmdExec1 + cmdExec2 + "'";
     log.info("KubeJob: cmdExec is: " + commands);*/
 
