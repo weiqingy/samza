@@ -189,6 +189,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
             .editOrNewSpec()
             .withRestartPolicy(POD_RESTART_POLICY).addToContainers(container).endSpec();
 
+    KubeUtils.addLogVolume(config, container, podBuilder);
     String preferredHost = resourceRequest.getPreferredHost();
     Pod pod;
     if (preferredHost.equals("ANY_HOST")) {

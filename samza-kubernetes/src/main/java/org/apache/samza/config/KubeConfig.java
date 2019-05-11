@@ -22,7 +22,14 @@ package org.apache.samza.config;
 public class KubeConfig {
 
   public static final String APP_IMAGE = "app.image";
-  public static final String SAMZA_LOG_DIR = "kube.samza.log.dir";
+  // The path inside the container where the log will be stored.
+  public static final String SAMZA_LOG_DIR = "kube.samza.log.container.path";
+
+  // The local path on host to be mounted into container for storing logs
+  public static final String SAMZA_LOG_HOST_PATH = "kube.samza.log.host.path";
+
+  public static final String SAMZA_LOG_VOLUME_NAME ="log-dir";
+
   public static final String K8S_API_NAMESPACE = "kube.api.namespace";
   public static final String K8S_POD_LABELS = "kube.pod.labels";
   // The amount of time for container to remain after it exits.
