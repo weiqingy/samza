@@ -92,7 +92,7 @@ public class KubeJob implements StreamJob {
     String restartPolicy = "OnFailure";
     Pod pod = KubeUtils.createPod(podName, restartPolicy, container, nameSpace);
     kubernetesClient.pods().create(pod);
-    // add watcher
+    // TODO: adding watcher here makes Client waiting .. Need to fix.
     kubernetesClient.pods().withName(podName).watch(watcher);
     return this;
   }

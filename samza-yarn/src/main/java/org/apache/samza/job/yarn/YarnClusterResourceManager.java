@@ -596,7 +596,6 @@ public class YarnClusterResourceManager extends ClusterResourceManager implement
     log.info("In runContainer in util: fwkPath= " + fwkPath + ";cmdPath=" + cmdPath + ";jobLib=" + jobLib);
     cmdBuilder.setCommandPath(cmdPath);
 
-
     String command = cmdBuilder.buildCommand();
     log.info("Container ID {} using command {}", samzaContainerId, command);
 

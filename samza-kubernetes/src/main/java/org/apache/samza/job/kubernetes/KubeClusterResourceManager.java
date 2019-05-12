@@ -22,10 +22,13 @@ import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.samza.clustermanager.*;
 import org.apache.samza.config.ClusterManagerConfig;
 import org.apache.samza.config.Config;
 import org.apache.samza.config.JobConfig;
+import org.apache.samza.config.ShellCommandConfig;
 import org.apache.samza.config.TaskConfig;
 import org.apache.samza.coordinator.JobModelManager;
 import org.apache.samza.coordinator.stream.messages.SetContainerHostMapping;
@@ -75,6 +78,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   public void start() {
     log.info("Kubernetes Cluster ResourceManager started, starting watcher");
     startPodWatcher();
+    jobModelManager.start();
   }
 
   // Create the owner reference of the samaza-operator pod
@@ -138,6 +142,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
       }
     };
 
+    // TODO: "podLabels" is empty. Need to add lable when creating Pod
     client.pods().withLabels(podLabels).watch(watcher);
   }
 
@@ -170,13 +175,15 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
 
   @Override
   public void requestResources(SamzaResourceRequest resourceRequest) {
-    String containerId = resourceRequest.getContainerID();
-    log.info("Requesting resources on " + resourceRequest.getPreferredHost() + " for container " + containerId);
-    String command = buildCmd(containerId);
-    log.info("Container ID {} using command {}", containerId, command);
+    String samzaContainerId = resourceRequest.getContainerID();
+    log.info("Requesting resources on " + resourceRequest.getPreferredHost() + " for container " + samzaContainerId);
+    CommandBuilder builder = getCommandBuilder(samzaContainerId);
+    String command = buildCmd(builder);
+    log.info("Container ID {} using command {}", samzaContainerId, command);
     Container container = KubeUtils.createContainer(STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, image, resourceRequest, command);
+    container.setEnv(getEnvs(builder));
     PodBuilder podBuilder = new PodBuilder().editOrNewMetadata()
-            .withName(String.format(TASK_POD_NAME_FORMAT, STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, appName, appId, containerId))
+            .withName(String.format(TASK_POD_NAME_FORMAT, STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, appName, appId, samzaContainerId))
             .withOwnerReferences(ownerReference)
             .addToLabels(podLabels).endMetadata()
             .editOrNewSpec()
@@ -224,9 +231,11 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   @Override
   public void stop(SamzaApplicationState.SamzaAppStatus status) {
     log.info("Kubernetes Cluster ResourceManager stopped");
+    // TODO: need to check
+    jobModelManager.start();
   }
 
-  private String buildCmd(String containerId) {
+  private String buildCmd(CommandBuilder cmdBuilder) {
     // TODO: check if we have framework path specified. If yes - use it, if not use default /opt/hello-samza/
     String jobLib = ""; // in case of separate framework, this directory will point at the job's libraries
     String cmdPath = "/opt/hello-samza/";
@@ -238,7 +247,6 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     }
     log.info("In runContainer in util: fwkPath= " + fwkPath + ";cmdPath=" + cmdPath + ";jobLib=" + jobLib);
 
-    CommandBuilder cmdBuilder = getCommandBuilder(containerId);
     cmdBuilder.setCommandPath(cmdPath);
 
     return cmdBuilder.buildCommand();
@@ -250,8 +258,35 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     String cmdBuilderClassName = taskConfig.getCommandClass(ShellCommandBuilder.class.getName());
     log.info("cmdBuilderClassName is: {}", cmdBuilderClassName);
     CommandBuilder cmdBuilder = Util.getObj(cmdBuilderClassName, CommandBuilder.class);
-    cmdBuilder.setConfig(config).setId(containerId);
+    if (jobModelManager.server() == null) {
+      log.info("[In CommandBuilder] HttpServer is null");
+      System.out.println("[In CommandBuilder] HttpServer is null");
+    }
+    log.info("[In CommandBuilder] HttpServer URL: " + jobModelManager.server().getUrl());
+    System.out.println("[In CommandBuilder] HttpServer URL: " + jobModelManager.server().getUrl());
+
+    cmdBuilder.setConfig(config).setId(containerId).setUrl(jobModelManager.server().getUrl());
 
     return cmdBuilder;
+  }
+
+  // Construct the envs for the task container pod
+  private List<EnvVar> getEnvs(CommandBuilder cmdBuilder) {
+    // for logging
+    StringBuilder sb = new StringBuilder();
+
+    List<EnvVar> envList = new ArrayList<>();
+    for (Map.Entry<String, String> entry : cmdBuilder.buildEnvironment().entrySet()) {
+      envList.add(new EnvVar(entry.getKey(), entry.getValue(), null));
+      sb.append(String.format("\n%s=%s", entry.getKey(), entry.getValue())); //logging
+    }
+
+    // TODO: The ID assigned to the container by the execution environment: K8s container Id. ?? Seems there is no id
+    // envList.add(ShellCommandConfig.ENV_EXECUTION_ENV_CONTAINER_ID(), container.getId().toString());
+    // sb.append(String.format("\n%s=%s", ShellCommandConfig.ENV_EXECUTION_ENV_CONTAINER_ID(), container.getId().toString()));
+
+    log.info("Using environment variables: {}", cmdBuilder, sb.toString());
+
+    return envList;
   }
 }
