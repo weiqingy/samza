@@ -86,7 +86,6 @@ public class KubeJob implements StreamJob {
     String cmd = buildJobCoordinatorCmd(fwkPath, fwkVersion);
     log.info(String.format("samza.fwk.path: %s. samza.fwk.version: %s. Command: %s", fwkPath, fwkVersion, cmd));
     Container container = KubeUtils.createContainer(SAMZA_OPERATOR_CONTAINER_NAME_PREFIX, image, request, cmd);
-    container.setEnv(getEnvs());
 
     // create Pod
     String restartPolicy = "OnFailure";
@@ -100,6 +99,8 @@ public class KubeJob implements StreamJob {
             .endSpec();
 
     KubeUtils.addLogVolume(config, container, podBuilder);
+    container.setEnv(getEnvs());
+
     podBuilder.editOrNewSpec().withContainers(container);
 
     Pod pod = podBuilder.build();
@@ -219,7 +220,7 @@ public class KubeJob implements StreamJob {
     }
     envList.add(new EnvVar("SAMZA_COORDINATOR_SYSTEM_CONFIG", Util.envVarEscape(coordinatorSysConfig), null));
     // TODO: SAMZA_LOG_DIR hasn't been used.
-    envList.add(new EnvVar(SAMZA_LOG_DIR, config.get(SAMZA_LOG_DIR), null));
+    envList.add(new EnvVar("SAMZA_LOG_DIR", config.get(SAMZA_LOG_DIR, "/tmp"), null));
     envList.add(new EnvVar(OPERATOR_POD_NAME, podName, null));
     log.info("======================================");
     log.info(Util.envVarEscape(coordinatorSysConfig));

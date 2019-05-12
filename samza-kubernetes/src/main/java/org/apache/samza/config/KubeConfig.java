@@ -22,7 +22,7 @@ package org.apache.samza.config;
 public class KubeConfig {
 
   public static final String APP_IMAGE = "app.image";
-  // The path inside the container where the log will be stored.
+  // The directory path inside which the log will be stored.
   public static final String SAMZA_LOG_DIR = "kube.samza.log.container.path";
 
   // The local path on host to be mounted into container for storing logs
