@@ -19,15 +19,8 @@
 
 package org.apache.samza.job.kubernetes;
 
-import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.EnvVar;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodStatus;
+import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.apache.samza.SamzaException;
 import org.apache.samza.clustermanager.ResourceRequestState;
 import org.apache.samza.clustermanager.SamzaResourceRequest;
@@ -42,7 +35,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.mutable.StringBuilder;
 
-import static org.apache.samza.config.ApplicationConfig.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.samza.config.ApplicationConfig.APP_ID;
+import static org.apache.samza.config.ApplicationConfig.APP_NAME;
 import static org.apache.samza.config.KubeConfig.*;
 import static org.apache.samza.job.ApplicationStatus.*;
 import static org.apache.samza.serializers.model.SamzaObjectMapper.getObjectMapper;
@@ -87,10 +86,24 @@ public class KubeJob implements StreamJob {
     String cmd = buildJobCoordinatorCmd(fwkPath, fwkVersion);
     log.info(String.format("samza.fwk.path: %s. samza.fwk.version: %s. Command: %s", fwkPath, fwkVersion, cmd));
     Container container = KubeUtils.createContainer(SAMZA_OPERATOR_CONTAINER_NAME_PREFIX, image, request, cmd);
-    container.setEnv(getEnvs());
+
     // create Pod
     String restartPolicy = "OnFailure";
-    Pod pod = KubeUtils.createPod(podName, restartPolicy, container, nameSpace);
+    PodBuilder podBuilder = new PodBuilder()
+            .editOrNewMetadata()
+              .withNamespace(nameSpace)
+              .withName(podName)
+            .endMetadata()
+            .editOrNewSpec()
+              .withRestartPolicy(restartPolicy)
+            .endSpec();
+
+    KubeUtils.addLogVolume(config, container, podBuilder);
+    container.setEnv(getEnvs());
+
+    podBuilder.editOrNewSpec().withContainers(container);
+
+    Pod pod = podBuilder.build();
     kubernetesClient.pods().create(pod);
     // TODO: adding watcher here makes Client waiting .. Need to fix.
     kubernetesClient.pods().withName(podName).watch(watcher);
@@ -207,7 +220,7 @@ public class KubeJob implements StreamJob {
     }
     envList.add(new EnvVar("SAMZA_COORDINATOR_SYSTEM_CONFIG", Util.envVarEscape(coordinatorSysConfig), null));
     // TODO: SAMZA_LOG_DIR hasn't been used.
-    envList.add(new EnvVar(SAMZA_LOG_DIR, config.get(SAMZA_LOG_DIR), null));
+    envList.add(new EnvVar("SAMZA_LOG_DIR", config.get(SAMZA_LOG_DIR, "/tmp"), null));
     envList.add(new EnvVar(OPERATOR_POD_NAME, podName, null));
     log.info("======================================");
     log.info(Util.envVarEscape(coordinatorSysConfig));
