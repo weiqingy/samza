@@ -1,9 +1,9 @@
 
-# 
+# Configurations
 - app.image
 - kube.api.namespace 
-- kube.samza.log.dir 
-- kube.container.debug.delay
+- kube.samza.log.container.path
+- kube.samza.log.host.path
 - cluster-manager.container.memory.mb
 - cluster-manager.container.cpu.cores
 
