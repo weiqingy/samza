@@ -84,7 +84,7 @@ public class KubeUtils {
       Volume volume = new Volume();
       volume.setHostPath(hostPathVolumeSource);
       volume.setName(SAMZA_LOG_VOLUME_NAME);
-      podBuilder.editOrNewSpec().withVolumes(volume);
+      podBuilder.editOrNewSpec().withVolumes(volume).endSpec();
 
       VolumeMount volumeMount = new VolumeMount();
       volumeMount.setMountPath(config.get(SAMZA_LOG_DIR, "/tmp"));

@@ -86,6 +86,7 @@ public class KubeJob implements StreamJob {
     String cmd = buildJobCoordinatorCmd(fwkPath, fwkVersion);
     log.info(String.format("samza.fwk.path: %s. samza.fwk.version: %s. Command: %s", fwkPath, fwkVersion, cmd));
     Container container = KubeUtils.createContainer(SAMZA_OPERATOR_CONTAINER_NAME_PREFIX, image, request, cmd);
+    container.setEnv(getEnvs());
 
     // create Pod
     String restartPolicy = "OnFailure";
@@ -96,12 +97,10 @@ public class KubeJob implements StreamJob {
             .endMetadata()
             .editOrNewSpec()
               .withRestartPolicy(restartPolicy)
+              .withContainers(container)
             .endSpec();
 
     KubeUtils.addLogVolume(config, container, podBuilder);
-    container.setEnv(getEnvs());
-
-    podBuilder.editOrNewSpec().withContainers(container);
 
     Pod pod = podBuilder.build();
     kubernetesClient.pods().create(pod);
