@@ -22,8 +22,11 @@ import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.samza.SamzaException;
 import org.apache.samza.clustermanager.*;
 import org.apache.samza.config.ClusterManagerConfig;
 import org.apache.samza.config.Config;
@@ -231,8 +234,8 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   @Override
   public void stop(SamzaApplicationState.SamzaAppStatus status) {
     log.info("Kubernetes Cluster ResourceManager stopped");
+    jobModelManager.stop();
     // TODO: need to check
-    jobModelManager.start();
   }
 
   private String buildCmd(CommandBuilder cmdBuilder) {
@@ -262,10 +265,16 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
       log.info("[In CommandBuilder] HttpServer is null");
       System.out.println("[In CommandBuilder] HttpServer is null");
     }
-    log.info("[In CommandBuilder] HttpServer URL: " + jobModelManager.server().getUrl());
-    System.out.println("[In CommandBuilder] HttpServer URL: " + jobModelManager.server().getUrl());
 
-    cmdBuilder.setConfig(config).setId(containerId).setUrl(jobModelManager.server().getUrl());
+    URL url = jobModelManager.server().getUrl();
+    log.info("[In CommandBuilder] HttpServer URL: " + url);
+    System.out.println("[In CommandBuilder] HttpServer URL: " + url);
+
+    URL formattedUrl = formatUrl(url);
+    log.info("[In CommandBuilder] Formatted HttpServer URL: " + formattedUrl);
+    System.out.println("[In CommandBuilder] Formatted HttpServer URL: " + formattedUrl);
+
+    cmdBuilder.setConfig(config).setId(containerId).setUrl(formattedUrl);
 
     return cmdBuilder;
   }
@@ -288,5 +297,22 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     log.info("Using environment variables: {}", cmdBuilder, sb.toString());
 
     return envList;
+  }
+
+  private URL formatUrl(URL url) {
+    int port = url.getPort();
+    String host = url.getHost();
+    log.info("Original host: {}, port: {}, url: {}", host, port, url);
+    
+    String formattedHost = host + "."+ namespace + ".svc.cluster.local";
+    log.info("Formatted host: {}, port: {}", formattedHost, port);
+    URL newUrl;
+    try {
+      newUrl = new URL("http://" + formattedHost + ":" + url.getPort());
+      log.info("Formatted URL: {}", newUrl);
+    } catch (MalformedURLException ex) {
+      throw new SamzaException(ex);
+    }
+    return newUrl;
   }
 }

@@ -60,7 +60,7 @@ class HttpServer(
   /**
    * The SevletHolder to use for static file (CSS/JS) serving.
    */
-  defaultHolder: ServletHolder = new ServletHolder(classOf[DefaultServlet])) extends Logging {
+  defaultHolder: ServletHolder = new ServletHolder(classOf[DefaultServlet])) extends Logging {[]
 
   var running = false
   var servlets = Map[String, Servlet]()
