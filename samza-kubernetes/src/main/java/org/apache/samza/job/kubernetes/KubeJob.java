@@ -218,8 +218,7 @@ public class KubeJob implements StreamJob {
       coordinatorSysConfig = "";
     }
     envList.add(new EnvVar("SAMZA_COORDINATOR_SYSTEM_CONFIG", Util.envVarEscape(coordinatorSysConfig), null));
-    // TODO: SAMZA_LOG_DIR hasn't been used.
-    envList.add(new EnvVar("SAMZA_LOG_DIR", config.get(SAMZA_LOG_DIR, "/tmp"), null));
+    envList.add(new EnvVar("SAMZA_LOG_DIR", config.get(SAMZA_LOG_DIR), null));
     envList.add(new EnvVar(OPERATOR_POD_NAME, podName, null));
     log.info("======================================");
     log.info(Util.envVarEscape(coordinatorSysConfig));

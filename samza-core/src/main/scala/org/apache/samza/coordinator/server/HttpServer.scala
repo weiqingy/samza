@@ -60,7 +60,7 @@ class HttpServer(
   /**
    * The SevletHolder to use for static file (CSS/JS) serving.
    */
-  defaultHolder: ServletHolder = new ServletHolder(classOf[DefaultServlet])) extends Logging {[]
+  defaultHolder: ServletHolder = new ServletHolder(classOf[DefaultServlet])) extends Logging {
 
   var running = false
   var servlets = Map[String, Servlet]()
@@ -132,6 +132,16 @@ class HttpServer(
       val runningPort = server.getConnectors()(0).asInstanceOf[NetworkConnector].getLocalPort()
 
       new URL("http://" + Util.getLocalHost.getHostName + ":" + runningPort + rootPath)
+    } else {
+      throw new SamzaException("HttpServer is not currently running, so URLs are not available for it.")
+    }
+  }
+
+  def getIpUrl = {
+    if (running) {
+      val runningPort = server.getConnectors()(0).asInstanceOf[NetworkConnector].getLocalPort()
+
+      new URL("http://" + Util.getLocalHost.getHostAddress + ":" + runningPort + rootPath)
     } else {
       throw new SamzaException("HttpServer is not currently running, so URLs are not available for it.")
     }

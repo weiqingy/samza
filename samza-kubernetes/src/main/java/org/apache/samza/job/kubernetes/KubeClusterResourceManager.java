@@ -267,15 +267,15 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
       System.out.println("[In CommandBuilder] HttpServer is null");
     }
 
-    URL url = jobModelManager.server().getUrl();
+    URL url = jobModelManager.server().getIpUrl();
     log.info("[In CommandBuilder] HttpServer URL: " + url);
     System.out.println("[In CommandBuilder] HttpServer URL: " + url);
 
-    URL formattedUrl = formatUrl(url);
-    log.info("[In CommandBuilder] Formatted HttpServer URL: " + formattedUrl);
-    System.out.println("[In CommandBuilder] Formatted HttpServer URL: " + formattedUrl);
+    //URL formattedUrl = formatUrl(url);
+    //log.info("[In CommandBuilder] Formatted HttpServer URL: " + formattedUrl);
+    //System.out.println("[In CommandBuilder] Formatted HttpServer URL: " + formattedUrl);
 
-    cmdBuilder.setConfig(config).setId(containerId).setUrl(formattedUrl);
+    cmdBuilder.setConfig(config).setId(containerId).setUrl(url);
 
     return cmdBuilder;
   }
@@ -304,12 +304,13 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     int port = url.getPort();
     String host = url.getHost();
     log.info("Original host: {}, port: {}, url: {}", host, port, url);
-    
+
     String formattedHost = host + "."+ namespace + ".svc.cluster.local";
     log.info("Formatted host: {}, port: {}", formattedHost, port);
     URL newUrl;
     try {
       newUrl = new URL("http://" + formattedHost + ":" + url.getPort());
+
       log.info("Formatted URL: {}", newUrl);
     } catch (MalformedURLException ex) {
       throw new SamzaException(ex);
