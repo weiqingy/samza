@@ -23,12 +23,6 @@ import java.util
 import java.util.concurrent.atomic.AtomicReference
 
 import org.apache.samza.Partition
-import org.apache.samza.clustermanager.ClusterBasedJobCoordinator
-import org.apache.samza.config.JobConfig.Config2Job
-import org.apache.samza.config.SystemConfig.Config2System
-import org.apache.samza.config.TaskConfig.Config2Task
-import org.apache.samza.config.{Config, _}
-import org.apache.samza.container.grouper.stream.SystemStreamPartitionGrouperFactory
 import org.apache.samza.config._
 import org.apache.samza.config.JobConfig.Config2Job
 import org.apache.samza.config.SystemConfig.Config2System
@@ -44,7 +38,6 @@ import org.apache.samza.metrics.{MetricsRegistry, MetricsRegistryMap}
 import org.apache.samza.runtime.LocationId
 import org.apache.samza.system._
 import org.apache.samza.util.{Logging, Util}
-import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -54,8 +47,6 @@ import scala.collection.JavaConverters._
  * given a Config object.
  */
 object JobModelManager extends Logging {
-  private val log = LoggerFactory.getLogger(classOf[ClusterBasedJobCoordinator])
-
   /**
    * a volatile value to store the current instantiated <code>JobModelManager</code>
    */

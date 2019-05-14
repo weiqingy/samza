@@ -379,7 +379,7 @@ public class ClusterBasedJobCoordinator {
    * @param args args
    */
   public static void main(String[] args) {
-
+    // TODO: remove all added code used for debugging
     Thread thread = new Thread() {
       public void run() {
         log.info("Dummy Thread starts to sleep");

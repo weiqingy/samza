@@ -22,7 +22,6 @@ package org.apache.samza.job.kubernetes;
 import io.fabric8.kubernetes.api.model.*;
 
 import java.util.Collections;
-import java.util.List;
 import org.apache.samza.clustermanager.SamzaResourceRequest;
 import org.apache.samza.config.Config;
 
@@ -47,15 +46,6 @@ public class KubeUtils {
   public static Pod createPod(String name, String restartPolicy, Container container, String namespace) {
     return new PodBuilder().editOrNewMetadata().withNamespace(namespace).withName(name).endMetadata()
             .editOrNewSpec().withRestartPolicy(restartPolicy).addToContainers(container).endSpec().build();
-  }
-
-  public static Container createContainer(String containerId, String image, SamzaResourceRequest resourceRequest) {
-    Quantity memQuantity = new QuantityBuilder(false)
-            .withAmount(String.valueOf(resourceRequest.getMemoryMB())).withFormat("Mi").build();
-    Quantity cpuQuantity = new QuantityBuilder(false)
-            .withAmount(String.valueOf(resourceRequest.getNumCores())).build();
-    return new ContainerBuilder().withName(containerId).withImage(image).withImagePullPolicy("Always").editOrNewResources()
-            .addToRequests("memory", memQuantity).addToRequests("cpu", cpuQuantity).endResources().withCommand("sdfsfsdfs").build();
   }
 
   // for Samza operator

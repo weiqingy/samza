@@ -104,7 +104,6 @@ public abstract class AbstractContainerAllocator implements Runnable {
    */
   @Override
   public void run() {
-
     while (isRunning) {
       try {
         assignResourceRequests();

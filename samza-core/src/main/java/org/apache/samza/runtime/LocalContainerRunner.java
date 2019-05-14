@@ -40,6 +40,7 @@ import java.util.Random;
 public class LocalContainerRunner {
   private static final Logger log = LoggerFactory.getLogger(LocalContainerRunner.class);
 
+  // TODO: remove all added code used for debugging
   public static void main(String[] args) throws Exception {
     Thread thread = new Thread() {
       public void run() {
