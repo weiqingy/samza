@@ -48,7 +48,7 @@ import static org.apache.samza.config.ApplicationConfig.*;
 import static org.apache.samza.config.KubeConfig.*;
 
 public class KubeClusterResourceManager extends ClusterResourceManager {
-  private static final Logger log = LoggerFactory.getLogger(KubeClusterResourceManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(KubeClusterResourceManager.class);
 
   private final Object lock = new Object();
   private final Map<String, String> podLabels = new HashMap<>();
@@ -62,13 +62,13 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   private boolean hostAffinityEnabled = false;
   private Config config;
 
-  KubeClusterResourceManager(Config config, JobModelManager jobModelManager,
-                             ClusterResourceManager.Callback callback, SamzaApplicationState samzaAppState) {
+  KubeClusterResourceManager(Config config, JobModelManager jobModelManager, ClusterResourceManager.Callback callback,
+      SamzaApplicationState samzaAppState) {
     super(callback);
     this.config = config;
     this.client = KubeClientFactory.create();
     this.jobModelManager = jobModelManager;
-    this.image = config.get(APP_IMAGE, "weiqingyang/hello-samza:v6");
+    this.image = config.get(APP_IMAGE, "weiqingyang/hello-samza-new:v0");
     this.namespace = config.get(K8S_API_NAMESPACE, "default");
     this.appId = config.get(APP_ID, "001");
     this.appName = config.get(APP_NAME, "samza");
@@ -79,28 +79,22 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
 
   @Override
   public void start() {
-    log.info("Kubernetes Cluster ResourceManager started, starting watcher");
+    LOG.info("Kubernetes Cluster ResourceManager started, starting watcher");
     startPodWatcher();
     jobModelManager.start();
   }
 
   // Create the owner reference of the samaza-operator pod
   private void createOwnerReferences() {
+    LOG.info("Start to creat owner references.");
+
     // The operator pod yaml needs to pass in OPERATOR_POD_NAME env
-    log.info("Start to run createOwnerReferences");
-    System.out.println("Start to run createOwnerReferences");
-
     String thisPodName = System.getenv(OPERATOR_POD_NAME);
+    LOG.info("Operator name is: {}, namespace is: {}", thisPodName, namespace);
 
-    log.info("[In createOwnerReferences()] OPERATOR_POD_NAME: " + thisPodName);
-    System.out.println("[In createOwnerReferences()] OPERATOR_POD_NAME: " + thisPodName);
-
-    log.info("namespace is: " + namespace);
     Pod pod = client.pods().inNamespace(namespace).withName(thisPodName).get();
-    if (pod == null) {
-      log.error("[In createOwnerReferences] Pod is null");
-    }
-    log.error("pod.getMetadata().getName is: {}; pod.getApiVersion is: {}; Uid is: {}; Kind is: {}",
+    // TODO: need to create printing util methods
+    LOG.error("pod.getMetadata().getName is: {}; pod.getApiVersion is: {}; Uid is: {}; Kind is: {}",
         pod.getMetadata().getName(), pod.getApiVersion(), pod.getMetadata().getUid(), pod.getKind());
     ownerReference = new OwnerReferenceBuilder()
           .withName(pod.getMetadata().getName())
@@ -114,34 +108,34 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     Watcher watcher = new Watcher<Pod>() {
       @Override
       public void eventReceived(Action action, Pod pod) {
-        log.info("Pod watcher received action " + action + " for pod " + pod.getMetadata().getName());
+        LOG.info("Pod watcher received action " + action + " for pod " + pod.getMetadata().getName());
         switch (action) {
           case ADDED:
-            log.info("Pod " + pod.getMetadata().getName() + " is added.");
+            LOG.info("Pod " + pod.getMetadata().getName() + " is added.");
             break;
           case MODIFIED:
-            log.info("Pod " + pod.getMetadata().getName() + " is modified.");
+            LOG.info("Pod " + pod.getMetadata().getName() + " is modified.");
             if (isPodFailed(pod)) {
               deletePod(pod);
               createNewStreamProcessor(pod);
             }
             break;
           case ERROR:
-            log.info("Pod " + pod.getMetadata().getName() + " received error.");
+            LOG.info("Pod " + pod.getMetadata().getName() + " received error.");
             if (isPodFailed(pod)) {
               deletePod(pod);
               createNewStreamProcessor(pod);
             }
             break;
           case DELETED:
-            log.info("Pod " + pod.getMetadata().getName() + " is deleted.");
+            LOG.info("Pod " + pod.getMetadata().getName() + " is deleted.");
             createNewStreamProcessor(pod);
             break;
         }
       }
       @Override
       public void onClose(KubernetesClientException e) {
-        log.error("Pod watcher closed", e);
+        LOG.error("Pod watcher closed", e);
       }
     };
 
@@ -156,9 +150,9 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   private void deletePod(Pod pod) {
     boolean deleted = client.pods().delete(pod);
     if (deleted) {
-      log.info("Deleted pod " + pod.getMetadata().getName());
+      LOG.info("Deleted pod " + pod.getMetadata().getName());
     } else {
-      log.info("Failed to deleted pod " + pod.getMetadata().getName());
+      LOG.info("Failed to deleted pod " + pod.getMetadata().getName());
     }
   }
   private void createNewStreamProcessor(Pod pod) {
@@ -179,10 +173,10 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   @Override
   public void requestResources(SamzaResourceRequest resourceRequest) {
     String samzaContainerId = resourceRequest.getContainerID();
-    log.info("Requesting resources on " + resourceRequest.getPreferredHost() + " for container " + samzaContainerId);
+    LOG.info("Requesting resources on " + resourceRequest.getPreferredHost() + " for container " + samzaContainerId);
     CommandBuilder builder = getCommandBuilder(samzaContainerId);
     String command = buildCmd(builder);
-    log.info("Container ID {} using command {}", samzaContainerId, command);
+    LOG.info("Container ID {} using command {}", samzaContainerId, command);
     Container container = KubeUtils.createContainer(STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, image, resourceRequest, command);
     container.setEnv(getEnvs(builder));
     PodBuilder podBuilder = new PodBuilder().editOrNewMetadata()
@@ -199,7 +193,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
       // Create a pod with only one container in anywhere
       pod = podBuilder.build();
     } else {
-      log.info("Making a preferred host request on " + preferredHost);
+      LOG.info("Making a preferred host request on " + preferredHost);
       pod = podBuilder.editOrNewSpec().editOrNewAffinity().editOrNewNodeAffinity()
               .addNewPreferredDuringSchedulingIgnoredDuringExecution().withNewPreference()
               .addNewMatchExpression()
@@ -209,7 +203,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
               .endPreference().endPreferredDuringSchedulingIgnoredDuringExecution().endNodeAffinity().endAffinity().endSpec().build();
     }
     client.pods().inNamespace(namespace).create(pod);
-    log.info("Created a pod " + pod.getMetadata().getName() + " on " + preferredHost);
+    LOG.info("Created a pod " + pod.getMetadata().getName() + " on " + preferredHost);
   }
 
   @Override
@@ -234,7 +228,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
 
   @Override
   public void stop(SamzaApplicationState.SamzaAppStatus status) {
-    log.info("Kubernetes Cluster ResourceManager stopped");
+    LOG.info("Kubernetes Cluster ResourceManager stopped");
     jobModelManager.stop();
     // TODO: need to check
   }
@@ -242,14 +236,14 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   private String buildCmd(CommandBuilder cmdBuilder) {
     // TODO: check if we have framework path specified. If yes - use it, if not use default /opt/hello-samza/
     String jobLib = ""; // in case of separate framework, this directory will point at the job's libraries
-    String cmdPath = "/opt/hello-samza/";
+    String cmdPath = "/opt/hello-samza/"; // TODO
 
     String fwkPath = JobConfig.getFwkPath(config);
     if(fwkPath != null && (! fwkPath.isEmpty())) {
       cmdPath = fwkPath;
       jobLib = "export JOB_LIB_DIR=/opt/hello-samza/lib";
     }
-    log.info("In runContainer in util: fwkPath= " + fwkPath + ";cmdPath=" + cmdPath + ";jobLib=" + jobLib);
+    LOG.info("In runContainer in util: fwkPath= " + fwkPath + ";cmdPath=" + cmdPath + ";jobLib=" + jobLib);
 
     cmdBuilder.setCommandPath(cmdPath);
 
@@ -260,19 +254,16 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   private CommandBuilder getCommandBuilder(String containerId) {
     TaskConfig taskConfig = new TaskConfig(config);
     String cmdBuilderClassName = taskConfig.getCommandClass(ShellCommandBuilder.class.getName());
-    log.info("cmdBuilderClassName is: {}", cmdBuilderClassName);
+    LOG.info("cmdBuilderClassName is: {}", cmdBuilderClassName);
     CommandBuilder cmdBuilder = Util.getObj(cmdBuilderClassName, CommandBuilder.class);
     if (jobModelManager.server() == null) {
-      log.info("[In CommandBuilder] HttpServer is null");
-      System.out.println("[In CommandBuilder] HttpServer is null");
+      LOG.error("HttpServer is null");
     }
-
     URL url = jobModelManager.server().getIpUrl();
-    log.info("[In CommandBuilder] HttpServer URL: " + url);
-    System.out.println("[In CommandBuilder] HttpServer URL: " + url);
+    LOG.info("HttpServer URL: " + url);
 
     //URL formattedUrl = formatUrl(url);
-    //log.info("[In CommandBuilder] Formatted HttpServer URL: " + formattedUrl);
+    //LOG.info("[In CommandBuilder] Formatted HttpServer URL: " + formattedUrl);
     //System.out.println("[In CommandBuilder] Formatted HttpServer URL: " + formattedUrl);
 
     cmdBuilder.setConfig(config).setId(containerId).setUrl(url);
@@ -295,7 +286,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     // envList.add(ShellCommandConfig.ENV_EXECUTION_ENV_CONTAINER_ID(), container.getId().toString());
     // sb.append(String.format("\n%s=%s", ShellCommandConfig.ENV_EXECUTION_ENV_CONTAINER_ID(), container.getId().toString()));
 
-    log.info("Using environment variables: {}", cmdBuilder, sb.toString());
+    LOG.info("Using environment variables: {}", cmdBuilder, sb.toString());
 
     return envList;
   }
@@ -303,15 +294,14 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   private URL formatUrl(URL url) {
     int port = url.getPort();
     String host = url.getHost();
-    log.info("Original host: {}, port: {}, url: {}", host, port, url);
+    LOG.info("Original host: {}, port: {}, url: {}", host, port, url);
 
     String formattedHost = host + "."+ namespace + ".svc.cluster.local";
-    log.info("Formatted host: {}, port: {}", formattedHost, port);
+    LOG.info("Formatted host: {}, port: {}", formattedHost, port);
     URL newUrl;
     try {
       newUrl = new URL("http://" + formattedHost + ":" + url.getPort());
-
-      log.info("Formatted URL: {}", newUrl);
+      LOG.info("Formatted URL: {}", newUrl);
     } catch (MalformedURLException ex) {
       throw new SamzaException(ex);
     }

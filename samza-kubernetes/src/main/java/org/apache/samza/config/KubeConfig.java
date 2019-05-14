@@ -38,7 +38,7 @@ public class KubeConfig {
   public static final String SAMZA_OPERATOR_CONTAINER_NAME_PREFIX = "jc";
   public static final String POD_RESTART_POLICY = "Always";
   public static final String OPERATOR_POD_NAME_FORMAT = "%s-%s-%s"; // jc-appName-appId
-  public static final String TASK_POD_NAME_FORMAT = "%s-%s-%s-%s"; // streamProcessor-appName-appId-containerId
+  public static final String TASK_POD_NAME_FORMAT = "%s-%s-%s-%s"; // stream-processor-appName-appId-containerId
   // Environment variable
   public static final String OPERATOR_POD_NAME = "OPERATOR_POD_NAME";
 
@@ -57,5 +57,4 @@ public class KubeConfig {
   private void validate() throws ConfigException {
     // TODO
   }
-
 }

@@ -67,7 +67,7 @@ public class KubeJob implements StreamJob {
     this.currentStatus = ApplicationStatus.New;
     this.watcher = new KubePodStatusWatcher(podName);
     this.nameSpace = config.get(K8S_API_NAMESPACE, "default");
-    this.image = config.get(APP_IMAGE, "weiqingyang/hello-samza:v6");
+    this.image = config.get(APP_IMAGE, "weiqingyang/hello-samza-new:v0");
   }
 
   /**
@@ -75,8 +75,8 @@ public class KubeJob implements StreamJob {
    */
   public KubeJob submit() {
     // create SamzaResourceRequest
-    int memoryMB = config.getInt("cluster-manager.container.memory.mb", 1024);
-    int numCores = config.getInt("cluster-manager.container.cpu.cores", 1);
+    int memoryMB = config.getInt("cluster-manager.container.memory.mb", 1024);  // TODO
+    int numCores = config.getInt("cluster-manager.container.cpu.cores", 1);  // TODO
     String preferredHost = ResourceRequestState.ANY_HOST;
     SamzaResourceRequest request = new SamzaResourceRequest(numCores, memoryMB, preferredHost, podName);
 
@@ -187,10 +187,10 @@ public class KubeJob implements StreamJob {
     log.info(String.format("KubeJob: fwk_path is %s, ver is %s use it directly ", fwkPath, fwkVersion));
 
     // default location
-    String cmdExec1 = "/opt/hello-samza/bin/run-jc.sh";
+    String cmdExec = "/opt/hello-samza/bin/run-jc.sh"; // TODO
     if (!fwkPath.isEmpty()) {
       // if we have framework installed as a separate package - use it
-      cmdExec1 = fwkPath + "/" + fwkVersion + "/bin/run-jc.sh";
+      cmdExec = fwkPath + "/" + fwkVersion + "/bin/run-jc.sh";
     }
 
     /*cmdExec1 = "/bin/bash -c \"" + cmdExec1 + "\"";
@@ -202,7 +202,7 @@ public class KubeJob implements StreamJob {
     String commands = "/bin/bash -c '" + cmdExec1 + cmdExec2 + "'";
     log.info("KubeJob: cmdExec is: " + commands);*/
 
-    return cmdExec1;
+    return cmdExec;
   }
 
   // Construct the envs for the job coordinator pod

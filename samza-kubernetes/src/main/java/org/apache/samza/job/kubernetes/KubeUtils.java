@@ -34,13 +34,12 @@ import static org.apache.samza.config.KubeConfig.SAMZA_LOG_VOLUME_NAME;
 public class KubeUtils {
 
   public static String getSamzaContainerNameFromPodName(String podName) {
-    //streamProcessor-appName-appId-containerId
+    // stream-processor-appName-appId-containerId
     String[] splits = podName.split("-");
     return splits[splits.length - 1];
   }
 
-  public static Pod createPod(String name, OwnerReference ownerReference, String restartPolicy
-          , Container container) {
+  public static Pod createPod(String name, OwnerReference ownerReference, String restartPolicy, Container container) {
     return new PodBuilder().editOrNewMetadata().withName(name).withOwnerReferences(ownerReference).endMetadata()
             .editOrNewSpec().withRestartPolicy(restartPolicy).addToContainers(container).endSpec().build();
   }

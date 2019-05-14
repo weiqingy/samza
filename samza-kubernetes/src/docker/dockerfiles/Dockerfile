@@ -17,23 +17,33 @@
 # under the License.
 
 
-FROM openjdk:8-alpine
+FROM ubuntu:latest
 
-ARG samza_uid=888
-
+# TODO: build samza base image. This is used to build the image of hello-samza example.
 # Before building the docker image, first build and make a Samza distribution following
-# the instructions in https://github.com/apache/samza (./gradlew clean releaseSqlShellTarGz)
-# If this docker file is being used in the context of building your images from a Samza distribution
+# the instructions in https://github.com/apache/samza.
+# If this docker file is being used in the context of building your images from a Samza distribution,
 # the docker build command should be invoked from the top level directory
 # of the Samza distribution. E.g.:
 # docker build -t samza:latest -f kubernetes/dockerfiles/Dockerfile .
 
-COPY samza-sql-shell_*.jar /opt/samza/jars
+RUN apt-get update -y
+RUN apt-get upgrade -y
 
-ENV SAMZA_HOME /opt/samza
+# install openjdk
+RUN apt-get install -y openjdk-8-jdk
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+ENV PATH $PATH:$JAVA_HOME/bin
 
-WORKDIR /opt/samza/work-dir
-RUN chmod g+w /opt/samza/work-dir
+# install and configure ssh service
+RUN apt-get install -y openssh-server \
+    && mkdir -p /var/run/sshd
 
-# Specify the User that the actual main process will run as
-USER ${samza_uid}
+# install general tools
+RUN apt-get install -y iproute2 vim inetutils-ping
+
+RUN apt-get clean
+
+RUN mkdir -p /opt/hello-samza
+WORKDIR /opt/hello-samza/
+COPY deploy/samza /opt/hello-samza/
