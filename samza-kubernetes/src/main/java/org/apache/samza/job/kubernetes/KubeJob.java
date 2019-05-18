@@ -50,7 +50,7 @@ import static org.apache.samza.serializers.model.SamzaObjectMapper.getObjectMapp
  * The client to start a Kubernetes job coordinator
  */
 public class KubeJob implements StreamJob {
-  private static final Logger log = LoggerFactory.getLogger(KubeJob.class);
+  private static final Logger LOG = LoggerFactory.getLogger(KubeJob.class);
   private Config config;
   private KubernetesClient kubernetesClient;
   private String podName;
@@ -84,7 +84,7 @@ public class KubeJob implements StreamJob {
     String fwkPath = config.get("samza.fwk.path", "");
     String fwkVersion = config.get("samza.fwk.version");
     String cmd = buildJobCoordinatorCmd(fwkPath, fwkVersion);
-    log.info(String.format("samza.fwk.path: %s. samza.fwk.version: %s. Command: %s", fwkPath, fwkVersion, cmd));
+    LOG.info(String.format("samza.fwk.path: %s. samza.fwk.version: %s. Command: %s", fwkPath, fwkVersion, cmd));
     Container container = KubeUtils.createContainer(SAMZA_OPERATOR_CONTAINER_NAME_PREFIX, image, request, cmd);
     container.setEnv(getEnvs());
 
@@ -113,6 +113,9 @@ public class KubeJob implements StreamJob {
    * Kill the job coordinator pod
    */
   public KubeJob kill() {
+    LOG.info("Killing application: {}, Operator pod: {}", config.get(APP_NAME), podName);
+    System.out.println("Killing application: " + config.get(APP_NAME) + "; Operator pod: " + podName);
+
     kubernetesClient.pods().withName(podName).delete();
     return this;
   }
@@ -184,7 +187,7 @@ public class KubeJob implements StreamJob {
     if (fwkVersion == null || fwkVersion.isEmpty()) {
       fwkVersion = "STABLE";
     }
-    log.info(String.format("KubeJob: fwk_path is %s, ver is %s use it directly ", fwkPath, fwkVersion));
+    LOG.info(String.format("KubeJob: fwk_path is %s, ver is %s use it directly ", fwkPath, fwkVersion));
 
     // default location
     String cmdExec = "/opt/hello-samza/bin/run-jc.sh"; // TODO
@@ -200,7 +203,7 @@ public class KubeJob implements StreamJob {
       cmdExec2 = "; sleep " + sleepTime;
     }
     String commands = "/bin/bash -c '" + cmdExec1 + cmdExec2 + "'";
-    log.info("KubeJob: cmdExec is: " + commands);*/
+    LOG.info("KubeJob: cmdExec is: " + commands);*/
 
     return cmdExec;
   }
@@ -214,15 +217,15 @@ public class KubeJob implements StreamJob {
     try  {
       coordinatorSysConfig = objectMapper.writeValueAsString(coordinatorSystemConfig);
     } catch (IOException ex) {
-      log.warn("No coordinator system configs!", ex);
+      LOG.warn("No coordinator system configs!", ex);
       coordinatorSysConfig = "";
     }
     envList.add(new EnvVar("SAMZA_COORDINATOR_SYSTEM_CONFIG", Util.envVarEscape(coordinatorSysConfig), null));
     envList.add(new EnvVar("SAMZA_LOG_DIR", config.get(SAMZA_LOG_DIR), null));
     envList.add(new EnvVar(OPERATOR_POD_NAME, podName, null));
-    log.info("======================================");
-    log.info(Util.envVarEscape(coordinatorSysConfig));
-    log.info("======================================");
+    LOG.info("======================================");
+    LOG.info(Util.envVarEscape(coordinatorSysConfig));
+    LOG.info("======================================");
     // TODO: "JAVA_OPTS" and "JAVA_HOME" are optional, but may need to set them later
     // "JAVA_OPTS"
     envList.add(new EnvVar("JAVA_OPTS", "", null));
