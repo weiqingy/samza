@@ -100,7 +100,7 @@ public class KubeJob implements StreamJob {
               .withContainers(container)
             .endSpec();
 
-    KubeUtils.addLogVolume(config, container, podBuilder);
+    KubeUtils.addLogVolume(config, container, podBuilder, podName, nameSpace, kubernetesClient);
 
     Pod pod = podBuilder.build();
     kubernetesClient.pods().create(pod);

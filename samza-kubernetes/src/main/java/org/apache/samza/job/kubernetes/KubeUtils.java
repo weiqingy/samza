@@ -22,6 +22,8 @@ package org.apache.samza.job.kubernetes;
 import io.fabric8.kubernetes.api.model.*;
 
 import java.util.Collections;
+
+import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.samza.clustermanager.SamzaResourceRequest;
 import org.apache.samza.config.Config;
 
@@ -64,14 +66,33 @@ public class KubeUtils {
 
   // Add volume into pod
   // Add volumeMount into container
-  public static void addLogVolume(Config config, Container container, PodBuilder podBuilder) {
+  public static void addLogVolume(Config config, Container container, PodBuilder podBuilder, String podName, String namespace, KubernetesClient client) {
     if (config.containsKey(SAMZA_LOG_HOST_PATH)) {
       // create a hostpath volume for storing logs
-      HostPathVolumeSource hostPathVolumeSource = new HostPathVolumeSource();
-      hostPathVolumeSource.setPath(config.get(SAMZA_LOG_HOST_PATH));
-      hostPathVolumeSource.setType("DirectoryOrCreate");
+//      HostPathVolumeSource hostPathVolumeSource = new HostPathVolumeSource();
+//      hostPathVolumeSource.setPath(config.get(SAMZA_LOG_HOST_PATH));
+//      hostPathVolumeSource.setType("DirectoryOrCreate");
+//      Volume volume = new Volume();
+//      volume.setHostPath(hostPathVolumeSource);
+//      volume.setName(SAMZA_LOG_VOLUME_NAME);
+//      podBuilder.editOrNewSpec().withVolumes(volume).endSpec();
+
+
+      String pvcName = "logdir-" + podName;
+      PersistentVolumeClaim claim = new PersistentVolumeClaimBuilder().withNewMetadata().withName(pvcName).endMetadata()
+              .withNewSpec()
+              .withNewResources()
+              .addToRequests("storage", new QuantityBuilder(false).withAmount("500").withFormat("Mi").build())
+              .endResources()
+              .withStorageClassName("default").endSpec().build();
+      // create PVC
+      client.persistentVolumeClaims().inNamespace(namespace).create(claim);
+
+      PersistentVolumeClaimVolumeSource claimVolumeSource =
+              new PersistentVolumeClaimVolumeSourceBuilder().withClaimName(claim.getMetadata().getName()).build();
+
       Volume volume = new Volume();
-      volume.setHostPath(hostPathVolumeSource);
+      volume.setPersistentVolumeClaim(claimVolumeSource);
       volume.setName(SAMZA_LOG_VOLUME_NAME);
       podBuilder.editOrNewSpec().withVolumes(volume).endSpec();
 
@@ -81,4 +102,6 @@ public class KubeUtils {
       container.setVolumeMounts(Collections.singletonList(volumeMount));
     }
   }
+
+
 }
