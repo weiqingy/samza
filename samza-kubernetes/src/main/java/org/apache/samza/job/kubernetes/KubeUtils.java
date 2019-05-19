@@ -67,7 +67,7 @@ public class KubeUtils {
   // Add volume into pod
   // Add volumeMount into container
   public static void addLogVolume(Config config, Container container, PodBuilder podBuilder, String podName, String namespace, KubernetesClient client) {
-    if (config.containsKey(SAMZA_LOG_HOST_PATH)) {
+//    if (config.containsKey(SAMZA_LOG_HOST_PATH)) {
       // create a hostpath volume for storing logs
 //      HostPathVolumeSource hostPathVolumeSource = new HostPathVolumeSource();
 //      hostPathVolumeSource.setPath(config.get(SAMZA_LOG_HOST_PATH));
@@ -100,7 +100,7 @@ public class KubeUtils {
       volumeMount.setMountPath(config.get(SAMZA_LOG_DIR, "/tmp"));
       volumeMount.setName(SAMZA_LOG_VOLUME_NAME);
       container.setVolumeMounts(Collections.singletonList(volumeMount));
-    }
+//    }
   }
 
 
