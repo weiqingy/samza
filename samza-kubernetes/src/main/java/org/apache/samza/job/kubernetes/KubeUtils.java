@@ -78,6 +78,7 @@ public class KubeUtils {
 //      podBuilder.editOrNewSpec().withVolumes(volume).endSpec();
 
 
+      // datadir-0-opulent-lion-cp-kafka-0
       String pvcName = "logdir-" + podName;
       PersistentVolumeClaim claim = new PersistentVolumeClaimBuilder().withNewMetadata().withName(pvcName).endMetadata()
               .withNewSpec()
@@ -85,17 +86,25 @@ public class KubeUtils {
               .addToRequests("storage", new QuantityBuilder(false).withAmount("500").withFormat("Mi").build())
               .endResources()
               .withStorageClassName("default").endSpec().build();
-      // create PVC
+      // create PVC -> create a pv dynamically
       client.persistentVolumeClaims().inNamespace(namespace).create(claim);
 
-      PersistentVolumeClaimVolumeSource claimVolumeSource =
+      PersistentVolumeClaimVolumeSource claimVolumeSource = // claimName: datadir-opulent-lion-cp-zookeeper-0
               new PersistentVolumeClaimVolumeSourceBuilder().withClaimName(claim.getMetadata().getName()).build();
 
+      //name: datadir
+      //    persistentVolumeClaim:
+      //    claimName: datadir-opulent-lion-cp-zookeeper-0
       Volume volume = new Volume();
       volume.setPersistentVolumeClaim(claimVolumeSource);
+
+      // datadir
       volume.setName(SAMZA_LOG_VOLUME_NAME);
       podBuilder.editOrNewSpec().withVolumes(volume).endSpec();
 
+      //     volumeMounts:
+    //    - mountPath: /etc/jmx-zookeeper
+    //      name: jmx-config
       VolumeMount volumeMount = new VolumeMount();
       volumeMount.setMountPath(config.get(SAMZA_LOG_DIR, "/tmp"));
       volumeMount.setName(SAMZA_LOG_VOLUME_NAME);

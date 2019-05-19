@@ -28,7 +28,7 @@ public class KubeConfig {
   // The local path on host to be mounted into container for storing logs
   public static final String SAMZA_LOG_HOST_PATH = "kube.samza.log.host.path";
 
-  public static final String SAMZA_LOG_VOLUME_NAME ="log-dir";
+  public static final String SAMZA_LOG_VOLUME_NAME ="logdir";
 
   public static final String K8S_API_NAMESPACE = "kube.api.namespace";
   public static final String K8S_POD_LABELS = "kube.pod.labels";
