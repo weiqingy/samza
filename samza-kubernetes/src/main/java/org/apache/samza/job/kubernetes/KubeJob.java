@@ -105,7 +105,7 @@ public class KubeJob implements StreamJob {
     Pod pod = podBuilder.build();
     kubernetesClient.pods().create(pod);
     // TODO: adding watcher here makes Client waiting .. Need to fix.
-    kubernetesClient.pods().withName(podName).watch(watcher);
+    // kubernetesClient.pods().withName(podName).watch(watcher);
     return this;
   }
 
@@ -113,10 +113,10 @@ public class KubeJob implements StreamJob {
    * Kill the job coordinator pod
    */
   public KubeJob kill() {
-    LOG.info("Killing application: {}, Operator pod: {}", config.get(APP_NAME), podName);
-    System.out.println("Killing application: " + config.get(APP_NAME) + "; Operator pod: " + podName);
-
-    kubernetesClient.pods().withName(podName).delete();
+    LOG.info("Killing application: {}, operator pod: {}, namespace: {}", config.get(APP_NAME), podName, nameSpace);
+    System.out.println("Killing application: " + config.get(APP_NAME) +
+        "; Operator pod: " + podName + "; namespace: " + nameSpace);
+    kubernetesClient.pods().inNamespace(nameSpace).withName(podName).delete();
     return this;
   }
 
