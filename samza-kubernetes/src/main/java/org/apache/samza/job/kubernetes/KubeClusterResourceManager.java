@@ -178,14 +178,15 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     LOG.info("Container ID {} using command {}", samzaContainerId, command);
     Container container = KubeUtils.createContainer(STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, image, resourceRequest, command);
     container.setEnv(getEnvs(builder));
+    String podName = String.format(TASK_POD_NAME_FORMAT, STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, appName, appId, samzaContainerId);
     PodBuilder podBuilder = new PodBuilder().editOrNewMetadata()
-            .withName(String.format(TASK_POD_NAME_FORMAT, STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, appName, appId, samzaContainerId))
+            .withName(podName)
             .withOwnerReferences(ownerReference)
             .addToLabels(podLabels).endMetadata()
             .editOrNewSpec()
             .withRestartPolicy(POD_RESTART_POLICY).addToContainers(container).endSpec();
 
-    KubeUtils.addLogVolume(config, container, podBuilder);
+    KubeUtils.addLogVolume(config, container, podBuilder, podName, namespace, client);
     String preferredHost = resourceRequest.getPreferredHost();
     Pod pod;
     if (preferredHost.equals("ANY_HOST")) {
