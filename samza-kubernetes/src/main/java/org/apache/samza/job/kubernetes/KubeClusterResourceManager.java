@@ -24,8 +24,8 @@ import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+
 import org.apache.samza.SamzaException;
 import org.apache.samza.clustermanager.*;
 import org.apache.samza.config.ClusterManagerConfig;
@@ -39,9 +39,6 @@ import org.apache.samza.job.ShellCommandBuilder;
 import org.apache.samza.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.apache.samza.config.ApplicationConfig.*;
 import static org.apache.samza.config.KubeConfig.*;
@@ -179,14 +176,46 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     Container container = KubeUtils.createContainer(STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, image, resourceRequest, command);
     container.setEnv(getEnvs(builder));
     String podName = String.format(TASK_POD_NAME_FORMAT, STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, appName, appId, samzaContainerId);
+
+    // create pvc
+    String pvcName = "logdir-" + podName;
+    PersistentVolumeClaim claim = new PersistentVolumeClaimBuilder()
+            .withNewMetadata().withName(pvcName).endMetadata()
+            .withNewSpec().addToAccessModes("ReadWriteOnce")
+            .withNewResources()
+              .addToRequests("storage", new QuantityBuilder(false).withAmount("500").withFormat("Mi").build())
+              .endResources()
+            .withStorageClassName("default").endSpec().build();
+    if (client.persistentVolumeClaims().inNamespace(namespace).withName(pvcName).get() == null ) {
+      // create PVC -> create a pv dynamically
+      client.persistentVolumeClaims().inNamespace(namespace).create(claim);
+    }
+
+    PersistentVolumeClaimVolumeSource claimVolumeSource = // claimName: datadir-opulent-lion-cp-zookeeper-0
+            new PersistentVolumeClaimVolumeSourceBuilder().withClaimName(claim.getMetadata().getName()).build();
+    //name: datadir
+    //    persistentVolumeClaim:
+    //    claimName: datadir-opulent-lion-cp-zookeeper-0
+    Volume volume = new Volume();
+    volume.setPersistentVolumeClaim(claimVolumeSource);
+    volume.setName(SAMZA_LOG_VOLUME_NAME);
+
+    //     volumeMounts:
+    //    - mountPath: /etc/jmx-zookeeper
+    //      name: jmx-config
+    VolumeMount volumeMount = new VolumeMount();
+    volumeMount.setMountPath(config.get(SAMZA_LOG_DIR, "/tmp"));
+    volumeMount.setName(SAMZA_LOG_VOLUME_NAME);
+    container.setVolumeMounts(Collections.singletonList(volumeMount));
+
     PodBuilder podBuilder = new PodBuilder().editOrNewMetadata()
             .withName(podName)
             .withOwnerReferences(ownerReference)
             .addToLabels(podLabels).endMetadata()
             .editOrNewSpec()
-            .withRestartPolicy(POD_RESTART_POLICY).addToContainers(container).endSpec();
+            .withRestartPolicy(POD_RESTART_POLICY)
+            .withVolumes(volume).addToContainers(container).endSpec();
 
-    KubeUtils.addLogVolume(config, container, podBuilder, podName, namespace, client);
     String preferredHost = resourceRequest.getPreferredHost();
     Pod pod;
     if (preferredHost.equals("ANY_HOST")) {

@@ -100,8 +100,6 @@ public class KubeJob implements StreamJob {
               .withContainers(container)
             .endSpec();
 
-    // KubeUtils.addLogVolume(config, container, podBuilder, podName, nameSpace, kubernetesClient);
-
     Pod pod = podBuilder.build();
     kubernetesClient.pods().create(pod);
     // TODO: adding watcher here makes Client waiting .. Need to fix.

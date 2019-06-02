@@ -81,8 +81,7 @@ public class KubeUtils {
       // datadir-0-opulent-lion-cp-kafka-0
       String pvcName = "logdir-" + podName;
       PersistentVolumeClaim claim = new PersistentVolumeClaimBuilder().withNewMetadata().withName(pvcName).endMetadata()
-              .withNewSpec()
-              .addToAccessModes("ReadWriteOnce")
+              .withNewSpec().addToAccessModes("ReadWriteOnce")
               .withNewResources()
               .addToRequests("storage", new QuantityBuilder(false).withAmount("500").withFormat("Mi").build())
               .endResources()
