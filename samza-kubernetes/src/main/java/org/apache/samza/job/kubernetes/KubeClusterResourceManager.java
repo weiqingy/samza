@@ -188,7 +188,10 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
             .withStorageClassName("default").endSpec().build();
     if (client.persistentVolumeClaims().inNamespace(namespace).withName(pvcName).get() == null ) {
       // create PVC -> create a pv dynamically
+      LOG.info("Created a pvc " + pvcName);
       client.persistentVolumeClaims().inNamespace(namespace).create(claim);
+    } else {
+      LOG.info("Use an existing pvc " + pvcName);
     }
 
     PersistentVolumeClaimVolumeSource claimVolumeSource = // claimName: datadir-opulent-lion-cp-zookeeper-0
