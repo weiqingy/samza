@@ -82,6 +82,7 @@ public class KubeUtils {
       String pvcName = "logdir-" + podName;
       PersistentVolumeClaim claim = new PersistentVolumeClaimBuilder().withNewMetadata().withName(pvcName).endMetadata()
               .withNewSpec()
+              .addToAccessModes("ReadWriteOnce")
               .withNewResources()
               .addToRequests("storage", new QuantityBuilder(false).withAmount("500").withFormat("Mi").build())
               .endResources()
