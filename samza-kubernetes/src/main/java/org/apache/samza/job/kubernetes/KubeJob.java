@@ -98,7 +98,7 @@ public class KubeJob implements StreamJob {
     //      name: jmx-config
     VolumeMount volumeMount = new VolumeMount();
     volumeMount.setMountPath(config.get(SAMZA_LOG_DIR, "/tmp/log"));
-    volumeMount.setName(SAMZA_LOG_VOLUME_NAME);
+    volumeMount.setName("azure");
     volumeMount.setSubPath("logdir-" + podName);
     container.setVolumeMounts(Collections.singletonList(volumeMount));
 
