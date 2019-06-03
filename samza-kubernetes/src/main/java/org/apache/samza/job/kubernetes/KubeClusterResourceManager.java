@@ -213,12 +213,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     VolumeMount volumeMount = new VolumeMount();
     volumeMount.setMountPath(config.get(SAMZA_LOG_DIR, "/tmp/log"));
     volumeMount.setName("azure");
-    volumeMount.setSubPath("logdir-" + podName);
-
-    VolumeMount stateVolumeMount = new VolumeMount();
-    stateVolumeMount.setMountPath(config.get("job.logged.store.base.dir", "/tmp/state"));
-    stateVolumeMount.setName("azure");
-    stateVolumeMount.setSubPath("statedir-" + podName);
+    volumeMount.setSubPath(podName);
 
     container.setVolumeMounts(Collections.singletonList(volumeMount));
 
