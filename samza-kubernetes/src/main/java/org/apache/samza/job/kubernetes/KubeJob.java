@@ -97,9 +97,9 @@ public class KubeJob implements StreamJob {
     //    - mountPath: /etc/jmx-zookeeper
     //      name: jmx-config
     VolumeMount volumeMount = new VolumeMount();
-    volumeMount.setMountPath(config.get(SAMZA_LOG_DIR, "/tmp/log"));
+    volumeMount.setMountPath(config.get(SAMZA_MOUNT_DIR, "/tmp/mnt"));
     volumeMount.setName("azure");
-    volumeMount.setSubPath("logdir-" + podName);
+    volumeMount.setSubPath(podName);
     container.setVolumeMounts(Collections.singletonList(volumeMount));
 
     // create Pod
@@ -234,7 +234,7 @@ public class KubeJob implements StreamJob {
       coordinatorSysConfig = "";
     }
     envList.add(new EnvVar("SAMZA_COORDINATOR_SYSTEM_CONFIG", Util.envVarEscape(coordinatorSysConfig), null));
-    envList.add(new EnvVar("SAMZA_LOG_DIR", config.get(SAMZA_LOG_DIR), null));
+    envList.add(new EnvVar("SAMZA_LOG_DIR", config.get(SAMZA_MOUNT_DIR), null));
     envList.add(new EnvVar(OPERATOR_POD_NAME, podName, null));
     LOG.info("======================================");
     LOG.info(Util.envVarEscape(coordinatorSysConfig));

@@ -211,10 +211,10 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     //    - mountPath: /etc/jmx-zookeeper
     //      name: jmx-config
     VolumeMount volumeMount = new VolumeMount();
-    volumeMount.setMountPath(config.get(SAMZA_LOG_DIR, "/tmp/log"));
+    volumeMount.setMountPath(config.get(SAMZA_MOUNT_DIR, "/tmp/mnt"));
     volumeMount.setName("azure");
     volumeMount.setSubPath(podName);
-
+    LOG.info("Set subpath to " + podName + ", mountpath to " + config.get(SAMZA_MOUNT_DIR, "/tmp/mnt"));
     container.setVolumeMounts(Collections.singletonList(volumeMount));
 
     PodBuilder podBuilder = new PodBuilder().editOrNewMetadata()
