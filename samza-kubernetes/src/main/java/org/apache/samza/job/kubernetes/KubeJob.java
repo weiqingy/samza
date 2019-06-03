@@ -37,6 +37,7 @@ import scala.collection.mutable.StringBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -88,6 +89,19 @@ public class KubeJob implements StreamJob {
     Container container = KubeUtils.createContainer(SAMZA_OPERATOR_CONTAINER_NAME_PREFIX, image, request, cmd);
     container.setEnv(getEnvs());
 
+    AzureFileVolumeSource azureFileVolumeSource = new AzureFileVolumeSource(false, "azure-secret", "aksshare");
+    Volume volume = new Volume();
+    volume.setAzureFile(azureFileVolumeSource);
+    volume.setName("azure");
+    //     volumeMounts:
+    //    - mountPath: /etc/jmx-zookeeper
+    //      name: jmx-config
+    VolumeMount volumeMount = new VolumeMount();
+    volumeMount.setMountPath(config.get(SAMZA_LOG_DIR, "/tmp/log"));
+    volumeMount.setName(SAMZA_LOG_VOLUME_NAME);
+    volumeMount.setSubPath("logdir-" + podName);
+    container.setVolumeMounts(Collections.singletonList(volumeMount));
+
     // create Pod
     String restartPolicy = "OnFailure";
     PodBuilder podBuilder = new PodBuilder()
@@ -98,6 +112,7 @@ public class KubeJob implements StreamJob {
             .editOrNewSpec()
               .withRestartPolicy(restartPolicy)
               .withContainers(container)
+              .withVolumes(volume)
             .endSpec();
 
     Pod pod = podBuilder.build();

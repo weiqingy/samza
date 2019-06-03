@@ -178,37 +178,48 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     String podName = String.format(TASK_POD_NAME_FORMAT, STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, appName, appId, samzaContainerId);
 
     // create pvc
-    String pvcName = "logdir-" + podName;
-    PersistentVolumeClaim claim = new PersistentVolumeClaimBuilder()
-            .withNewMetadata().withName(pvcName).endMetadata()
-            .withNewSpec().addToAccessModes("ReadWriteOnce")
-            .withNewResources()
-              .addToRequests("storage", new QuantityBuilder(false).withAmount("500").withFormat("Mi").build())
-              .endResources()
-            .withStorageClassName("default").endSpec().build();
-    if (client.persistentVolumeClaims().inNamespace(namespace).withName(pvcName).get() == null ) {
-      // create PVC -> create a pv dynamically
-      LOG.info("Created a pvc " + pvcName);
-      client.persistentVolumeClaims().inNamespace(namespace).create(claim);
-    } else {
-      LOG.info("Use an existing pvc " + pvcName);
-    }
-
-    PersistentVolumeClaimVolumeSource claimVolumeSource = // claimName: datadir-opulent-lion-cp-zookeeper-0
-            new PersistentVolumeClaimVolumeSourceBuilder().withClaimName(claim.getMetadata().getName()).build();
+//    String pvcName = "logdir-" + podName;
+//    PersistentVolumeClaim claim = new PersistentVolumeClaimBuilder()
+//            .withNewMetadata().withName(pvcName).endMetadata()
+//            .withNewSpec().addToAccessModes("ReadWriteOnce")
+//            .withNewResources()
+//              .addToRequests("storage", new QuantityBuilder(false).withAmount("500").withFormat("Mi").build())
+//              .endResources()
+//            .withStorageClassName("default").endSpec().build();
+//    if (client.persistentVolumeClaims().inNamespace(namespace).withName(pvcName).get() == null ) {
+//      // create PVC -> create a pv dynamically
+//      LOG.info("Created a pvc " + pvcName);
+//      client.persistentVolumeClaims().inNamespace(namespace).create(claim);
+//    } else {
+//      LOG.info("Use an existing pvc " + pvcName);
+//    }
+//
+//    PersistentVolumeClaimVolumeSource claimVolumeSource = // claimName: datadir-opulent-lion-cp-zookeeper-0
+//            new PersistentVolumeClaimVolumeSourceBuilder().withClaimName(claim.getMetadata().getName()).build();
     //name: datadir
     //    persistentVolumeClaim:
     //    claimName: datadir-opulent-lion-cp-zookeeper-0
-    Volume volume = new Volume();
-    volume.setPersistentVolumeClaim(claimVolumeSource);
-    volume.setName(SAMZA_LOG_VOLUME_NAME);
+//    Volume volume = new Volume();
+//    volume.setPersistentVolumeClaim(claimVolumeSource);
+//    volume.setName(SAMZA_LOG_VOLUME_NAME);
 
+    AzureFileVolumeSource azureFileVolumeSource = new AzureFileVolumeSource(false, "azure-secret", "aksshare");
+    Volume volume = new Volume();
+    volume.setAzureFile(azureFileVolumeSource);
+    volume.setName("azure");
     //     volumeMounts:
     //    - mountPath: /etc/jmx-zookeeper
     //      name: jmx-config
     VolumeMount volumeMount = new VolumeMount();
-    volumeMount.setMountPath(config.get(SAMZA_LOG_DIR, "/tmp"));
+    volumeMount.setMountPath(config.get(SAMZA_LOG_DIR, "/tmp/log"));
     volumeMount.setName(SAMZA_LOG_VOLUME_NAME);
+    volumeMount.setSubPath("logdir-" + podName);
+
+    VolumeMount stateVolumeMount = new VolumeMount();
+    stateVolumeMount.setMountPath(config.get("job.logged.store.base.dir", "/tmp/state"));
+    stateVolumeMount.setName(SAMZA_STATE_VOLUME_NAME);
+    stateVolumeMount.setSubPath("statedir-" + podName);
+
     container.setVolumeMounts(Collections.singletonList(volumeMount));
 
     PodBuilder podBuilder = new PodBuilder().editOrNewMetadata()
