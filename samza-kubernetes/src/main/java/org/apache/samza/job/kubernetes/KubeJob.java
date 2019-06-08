@@ -93,9 +93,6 @@ public class KubeJob implements StreamJob {
     Volume volume = new Volume();
     volume.setAzureFile(azureFileVolumeSource);
     volume.setName("azure");
-    //     volumeMounts:
-    //    - mountPath: /etc/jmx-zookeeper
-    //      name: jmx-config
     VolumeMount volumeMount = new VolumeMount();
     volumeMount.setMountPath(config.get(SAMZA_MOUNT_DIR, "/tmp/mnt"));
     volumeMount.setName("azure");
@@ -118,7 +115,7 @@ public class KubeJob implements StreamJob {
     Pod pod = podBuilder.build();
     kubernetesClient.pods().create(pod);
     // TODO: adding watcher here makes Client waiting .. Need to fix.
-    // kubernetesClient.pods().withName(podName).watch(watcher);
+     kubernetesClient.pods().withName(podName).watch(watcher);
     return this;
   }
 
@@ -235,7 +232,7 @@ public class KubeJob implements StreamJob {
     }
     envList.add(new EnvVar("SAMZA_COORDINATOR_SYSTEM_CONFIG", Util.envVarEscape(coordinatorSysConfig), null));
     envList.add(new EnvVar("SAMZA_LOG_DIR", config.get(SAMZA_MOUNT_DIR), null));
-    envList.add(new EnvVar(OPERATOR_POD_NAME, podName, null));
+    envList.add(new EnvVar(COORDINATOR_POD_NAME, podName, null));
     LOG.info("======================================");
     LOG.info(Util.envVarEscape(coordinatorSysConfig));
     LOG.info("======================================");

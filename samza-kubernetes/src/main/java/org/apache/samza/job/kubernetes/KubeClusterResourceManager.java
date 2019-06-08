@@ -57,6 +57,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   private JobModelManager jobModelManager;
   private boolean hostAffinityEnabled = false;
   private Config config;
+  private String jcPodName;
 
   KubeClusterResourceManager(Config config, JobModelManager jobModelManager, ClusterResourceManager.Callback callback,
       SamzaApplicationState samzaAppState) {
@@ -64,7 +65,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     this.config = config;
     this.client = KubeClientFactory.create();
     this.jobModelManager = jobModelManager;
-    this.image = config.get(APP_IMAGE, "weiqingyang/hello-samza-new:v0");
+    this.image = config.get(APP_IMAGE, "weiqingyang/samza:v0");
     this.namespace = config.get(K8S_API_NAMESPACE, "default");
     this.appId = config.get(APP_ID, "001");
     this.appName = config.get(APP_NAME, "samza");
@@ -82,28 +83,29 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
 
   // Create the owner reference of the samaza-operator pod
   private void createOwnerReferences() {
-    LOG.info("Start to creat owner references.");
 
-    // The operator pod yaml needs to pass in OPERATOR_POD_NAME env
-    String thisPodName = System.getenv(OPERATOR_POD_NAME);
-    LOG.info("Operator name is: {}, namespace is: {}", thisPodName, namespace);
-
-    Pod pod = client.pods().inNamespace(namespace).withName(thisPodName).get();
-    // TODO: need to create printing util methods
-    LOG.error("pod.getMetadata().getName is: {}; pod.getApiVersion is: {}; Uid is: {}; Kind is: {}",
-        pod.getMetadata().getName(), pod.getApiVersion(), pod.getMetadata().getUid(), pod.getKind());
+    // The operator pod yaml needs to pass in COORDINATOR_POD_NAME env
+    this.jcPodName = System.getenv(COORDINATOR_POD_NAME);
+    LOG.info("job coordinator pod name is: {}, namespace is: {}", jcPodName, namespace);
+    Pod pod = client.pods().inNamespace(namespace).withName(jcPodName).get();
     ownerReference = new OwnerReferenceBuilder()
           .withName(pod.getMetadata().getName())
           .withApiVersion(pod.getApiVersion())
           .withUid(pod.getMetadata().getUid())
           .withKind(pod.getKind())
           .withController(true).build();
+    podLabels.put("jc-pod-name", jcPodName);
   }
 
   public void startPodWatcher() {
     Watcher watcher = new Watcher<Pod>() {
       @Override
       public void eventReceived(Action action, Pod pod) {
+        if (!pod.getMetadata().getLabels().get("jc-pod-name").equals(jcPodName)) {
+          LOG.warn("This JC pod name is " + jcPodName + ", received pods for a different JC "
+                  + pod.getMetadata().getLabels().get("jc-pod-name"));
+          return;
+        }
         LOG.info("Pod watcher received action " + action + " for pod " + pod.getMetadata().getName());
         switch (action) {
           case ADDED:
@@ -177,39 +179,12 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     container.setEnv(getEnvs(builder));
     String podName = String.format(TASK_POD_NAME_FORMAT, STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, appName, appId, samzaContainerId);
 
-    // create pvc
-//    String pvcName = "logdir-" + podName;
-//    PersistentVolumeClaim claim = new PersistentVolumeClaimBuilder()
-//            .withNewMetadata().withName(pvcName).endMetadata()
-//            .withNewSpec().addToAccessModes("ReadWriteOnce")
-//            .withNewResources()
-//              .addToRequests("storage", new QuantityBuilder(false).withAmount("500").withFormat("Mi").build())
-//              .endResources()
-//            .withStorageClassName("default").endSpec().build();
-//    if (client.persistentVolumeClaims().inNamespace(namespace).withName(pvcName).get() == null ) {
-//      // create PVC -> create a pv dynamically
-//      LOG.info("Created a pvc " + pvcName);
-//      client.persistentVolumeClaims().inNamespace(namespace).create(claim);
-//    } else {
-//      LOG.info("Use an existing pvc " + pvcName);
-//    }
-//
-//    PersistentVolumeClaimVolumeSource claimVolumeSource = // claimName: datadir-opulent-lion-cp-zookeeper-0
-//            new PersistentVolumeClaimVolumeSourceBuilder().withClaimName(claim.getMetadata().getName()).build();
-    //name: datadir
-    //    persistentVolumeClaim:
-    //    claimName: datadir-opulent-lion-cp-zookeeper-0
-//    Volume volume = new Volume();
-//    volume.setPersistentVolumeClaim(claimVolumeSource);
-//    volume.setName(SAMZA_LOG_VOLUME_NAME);
-
-    AzureFileVolumeSource azureFileVolumeSource = new AzureFileVolumeSource(false, "azure-secret", "aksshare");
+    //TODO pluggable volume implementation hostpath, azure file
+    AzureFileVolumeSource azureFileVolumeSource =
+            new AzureFileVolumeSource(false, "azure-secret", "aksshare");
     Volume volume = new Volume();
     volume.setAzureFile(azureFileVolumeSource);
     volume.setName("azure");
-    //     volumeMounts:
-    //    - mountPath: /etc/jmx-zookeeper
-    //      name: jmx-config
     VolumeMount volumeMount = new VolumeMount();
     volumeMount.setMountPath(config.get(SAMZA_MOUNT_DIR, "/tmp/mnt"));
     volumeMount.setName("azure");
@@ -274,12 +249,12 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   private String buildCmd(CommandBuilder cmdBuilder) {
     // TODO: check if we have framework path specified. If yes - use it, if not use default /opt/hello-samza/
     String jobLib = ""; // in case of separate framework, this directory will point at the job's libraries
-    String cmdPath = "/opt/hello-samza/"; // TODO
+    String cmdPath = "/opt/samza/"; // TODO
 
     String fwkPath = JobConfig.getFwkPath(config);
     if(fwkPath != null && (! fwkPath.isEmpty())) {
       cmdPath = fwkPath;
-      jobLib = "export JOB_LIB_DIR=/opt/hello-samza/lib";
+      jobLib = "export JOB_LIB_DIR=/opt/samza/lib";
     }
     LOG.info("In runContainer in util: fwkPath= " + fwkPath + ";cmdPath=" + cmdPath + ";jobLib=" + jobLib);
 
@@ -292,18 +267,12 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   private CommandBuilder getCommandBuilder(String containerId) {
     TaskConfig taskConfig = new TaskConfig(config);
     String cmdBuilderClassName = taskConfig.getCommandClass(ShellCommandBuilder.class.getName());
-    LOG.info("cmdBuilderClassName is: {}", cmdBuilderClassName);
     CommandBuilder cmdBuilder = Util.getObj(cmdBuilderClassName, CommandBuilder.class);
     if (jobModelManager.server() == null) {
       LOG.error("HttpServer is null");
     }
     URL url = jobModelManager.server().getIpUrl();
     LOG.info("HttpServer URL: " + url);
-
-    //URL formattedUrl = formatUrl(url);
-    //LOG.info("[In CommandBuilder] Formatted HttpServer URL: " + formattedUrl);
-    //System.out.println("[In CommandBuilder] Formatted HttpServer URL: " + formattedUrl);
-
     cmdBuilder.setConfig(config).setId(containerId).setUrl(url);
 
     return cmdBuilder;

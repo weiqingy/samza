@@ -21,21 +21,21 @@ package org.apache.samza.config;
 
 public class KubeConfig {
 
-  public static final String APP_IMAGE = "app.image";
-  // The directory path inside which the log will be stored.
-  public static final String SAMZA_MOUNT_DIR = "kube.samza.log.container.path";
+  // the image name of samza
+  public static final String APP_IMAGE = "kube.app.image";
 
-  public static final String K8S_API_NAMESPACE = "kube.api.namespace";
-  public static final String K8S_POD_LABELS = "kube.pod.labels";
-  // The amount of time for container to remain after it exits.
-  public static final String DEBUG_DELAY = "kube.container.debug.delay";
-  public static final String STREAM_PROCESSOR_CONTAINER_NAME_PREFIX = "stream-processor";
+  // The directory path inside which the log will be stored.
+  public static final String SAMZA_MOUNT_DIR = "kube.pod.mnt.path";
+
+  public static final String K8S_API_NAMESPACE = "kube.namespace";
+
+  public static final String STREAM_PROCESSOR_CONTAINER_NAME_PREFIX = "sp";
   public static final String SAMZA_OPERATOR_CONTAINER_NAME_PREFIX = "jc";
   public static final String POD_RESTART_POLICY = "Always";
   public static final String OPERATOR_POD_NAME_FORMAT = "%s-%s-%s"; // jc-appName-appId
-  public static final String TASK_POD_NAME_FORMAT = "%s-%s-%s-%s"; // stream-processor-appName-appId-containerId
+  public static final String TASK_POD_NAME_FORMAT = "%s-%s-%s-%s"; // sp-appName-appId-containerId
   // Environment variable
-  public static final String OPERATOR_POD_NAME = "OPERATOR_POD_NAME";
+  public static final String COORDINATOR_POD_NAME = "COORDINATOR_POD_NAME";
 
   private Config config;
 
