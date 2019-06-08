@@ -25,9 +25,9 @@ public class KubeConfig {
   public static final String APP_IMAGE = "kube.app.image";
 
   // The directory path inside which the log will be stored.
-  public static final String SAMZA_MOUNT_DIR = "kube.pod.mnt.path";
+  public static final String SAMZA_MOUNT_DIR = "kube.app.pod.mnt.path";
 
-  public static final String K8S_API_NAMESPACE = "kube.namespace";
+  public static final String K8S_API_NAMESPACE = "kube.app.namespace";
 
   public static final String STREAM_PROCESSOR_CONTAINER_NAME_PREFIX = "sp";
   public static final String SAMZA_OPERATOR_CONTAINER_NAME_PREFIX = "jc";
