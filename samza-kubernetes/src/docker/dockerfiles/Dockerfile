@@ -19,14 +19,6 @@
 
 FROM ubuntu:latest
 
-# TODO: build samza base image. This is used to build the image of hello-samza example.
-# Before building the docker image, first build and make a Samza distribution following
-# the instructions in https://github.com/apache/samza.
-# If this docker file is being used in the context of building your images from a Samza distribution,
-# the docker build command should be invoked from the top level directory
-# of the Samza distribution. E.g.:
-# docker build -t samza:latest -f kubernetes/dockerfiles/Dockerfile .
-
 RUN apt-get update -y
 RUN apt-get upgrade -y
 
@@ -47,3 +39,11 @@ RUN apt-get clean
 RUN mkdir -p /opt/hello-samza
 WORKDIR /opt/hello-samza/
 COPY deploy/samza /opt/hello-samza/
+
+# may need to update the following jars during debugging
+COPY samza-core_2.11-1.0.1-SNAPSHOT.jar /opt/hello-samza/lib/
+COPY samza-kubernetes_2.11-1.0.1-SNAPSHOT.jar  /opt/hello-samza/lib/
+COPY run-jc.sh /opt/hello-samba/bin/
+
+
+
