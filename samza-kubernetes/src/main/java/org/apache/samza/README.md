@@ -18,9 +18,9 @@
  */
 
 # Configurations
-- kube.app.image : the image name for the samza app
-- kube.app.namespace : the namespace where the samza app run
-- kube.app.pod.mnt.path: the path where the remote volume is mounted into the pod, both for the job coordinator pod and stream processor pod
+- kube.app.image: the image name for the samza app
+- kube.app.namespace: the namespace where the samza app runs
+- kube.app.pod.mnt.path: the path where the remote volume is mounted into the pod, for both the job coordinator pod and stream processor pod
   the volume can be used for storing logs and local states.
 - cluster-manager.container.memory.mb: the memory size for the samza stream processor
 - cluster-manager.container.cpu.cores: the cpu cores for the samza stream processor 

@@ -25,7 +25,6 @@ import io.fabric8.kubernetes.client.Watcher;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
-
 import org.apache.samza.SamzaException;
 import org.apache.samza.clustermanager.*;
 import org.apache.samza.config.ClusterManagerConfig;
@@ -45,8 +44,6 @@ import static org.apache.samza.config.KubeConfig.*;
 
 public class KubeClusterResourceManager extends ClusterResourceManager {
   private static final Logger LOG = LoggerFactory.getLogger(KubeClusterResourceManager.class);
-
-  private final Object lock = new Object();
   private final Map<String, String> podLabels = new HashMap<>();
   private KubernetesClient client;
   private String appId;
@@ -55,7 +52,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
   private String namespace;
   private OwnerReference ownerReference;
   private JobModelManager jobModelManager;
-  private boolean hostAffinityEnabled = false;
+  private boolean hostAffinityEnabled;
   private Config config;
   private String jcPodName;
 
@@ -83,7 +80,6 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
 
   // Create the owner reference of the samaza-operator pod
   private void createOwnerReferences() {
-
     // The operator pod yaml needs to pass in COORDINATOR_POD_NAME env
     this.jcPodName = System.getenv(COORDINATOR_POD_NAME);
     LOG.info("job coordinator pod name is: {}, namespace is: {}", jcPodName, namespace);
@@ -179,7 +175,7 @@ public class KubeClusterResourceManager extends ClusterResourceManager {
     container.setEnv(getEnvs(builder));
     String podName = String.format(TASK_POD_NAME_FORMAT, STREAM_PROCESSOR_CONTAINER_NAME_PREFIX, appName, appId, samzaContainerId);
 
-    //TODO pluggable volume implementation hostpath, azure file
+    //TODO: pluggable volume implementation hostpath, azure file
     AzureFileVolumeSource azureFileVolumeSource =
             new AzureFileVolumeSource(false, "azure-secret", "aksshare");
     Volume volume = new Volume();

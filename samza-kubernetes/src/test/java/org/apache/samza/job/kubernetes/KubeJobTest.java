@@ -19,24 +19,13 @@
 
 package org.apache.samza.job.kubernetes;
 
-import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.ConfigBuilder;
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.Test;
 
+// TODO
+public class KubeJobTest {
 
-public class KubeClientFactory {
-  private static final Logger LOG = LoggerFactory.getLogger(KubeClientFactory.class);
+  @Test
+  public void testFileSystemImplConfigSuccess() {
 
-  public static KubernetesClient create() {
-    LOG.info("Creating an instance of a Kubernetes client. ");
-    ConfigBuilder builder = new ConfigBuilder();
-    Config config = builder.build();
-    KubernetesClient client = new DefaultKubernetesClient(config);
-    LOG.info("Kubernetes client created. ");
-
-    return client;
   }
 }
